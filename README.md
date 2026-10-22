@@ -62,6 +62,11 @@ Open a workflow from **Templates → ComfyUI-Moss-Image-Edit-Native**, or drop o
 - [`moss_image_edit.json`](example_workflows/moss_image_edit.json): edit one image.
 - [`moss_image_edit_multi_reference.json`](example_workflows/moss_image_edit_multi_reference.json): two references,
   add up to four on the References node.
+- [`moss_image_edit_base.json`](example_workflows/moss_image_edit_base.json) and
+  [`moss_image_edit_base_multi_reference.json`](example_workflows/moss_image_edit_base_multi_reference.json): the same
+  on MOSS-Image Base (`moss_image_base_int8_convrot`, or `moss_image_base_bf16`). See [Base or SFT](#base-or-sft).
+
+The SFT workflows load `moss_image_sft_bf16`; pick `moss_image_sft_int8_convrot` in the loader for half the memory.
 
 They load `moss_edit_bicycle.png` / `moss_edit_basket.png`: copy [`example_inputs/`](example_inputs) to `ComfyUI/input`
 or pick your own images. The graph:
@@ -132,9 +137,19 @@ stray copy of the strap on the wall). Image 1 stays the base.
 | 1024² (4096 tokens) | on, 2016 MB | 1.04 s/it | |
 | 1024² | off | 1.86 s/it | bit-identical image |
 | text-to-image 512², no references | – | 4.7 it/s | stock forward |
+| Base int8_convrot, 512² | on | 11.6 it/s | int8 kernels, LoRA on the fused qkv |
 
 With the cache an edit costs about what a text-to-image step does. Memory compiler: 1–2 graph breaks, 0 rogues
 (text-to-image: 1).
+
+### Base or SFT
+
+![Base: input, single-image edit, two references](docs/base_model.jpg)
+
+The LoRA was trained on SFT and upstream supports both. On `moss_image_base_int8_convrot` single-image edits come out
+as clean as on SFT (middle). Combining references is weaker on Base: every seed tried left a ghost of image 2 on the
+wall, where the basket sits in its own frame (right, seed 2, the cleanest of seven); SFT does this much less. Use SFT
+for multi-reference edits.
 
 ## Tests (CPU only)
 
