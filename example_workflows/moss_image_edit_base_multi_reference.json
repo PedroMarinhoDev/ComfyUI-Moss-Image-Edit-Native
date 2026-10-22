@@ -111,13 +111,13 @@
           ]
         }
       ],
-      "title": "Moss-Image-Edit LoRA",
+      "title": "Moss-Image-Edit LoRA (raise to 1.0 for two images)",
       "properties": {
         "Node name for S&R": "LoraLoaderModelOnly"
       },
       "widgets_values": [
         "moss_image_edit_lora_bf16.safetensors",
-        1
+        0.25
       ],
       "widgets_values_named": {
         "lora_name": "moss_image_edit_lora_bf16.safetensors",
@@ -510,7 +510,7 @@
         "Node name for S&R": "MOSSImageEditReferences"
       },
       "widgets_values": [
-        512,
+        1024,
         "auto"
       ],
       "widgets_values_named": {
@@ -816,7 +816,7 @@
       "title": "Read me",
       "properties": {},
       "widgets_values": [
-        "## MOSS-Image Edit on MOSS-Image Base (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_base_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_int8_convrot.safetensors) or [moss_image_base_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors) (MOSS-Image Base; the LoRA was trained on SFT, the SFT workflows use that)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*\u2026 (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- On Base, combining references often leaves a ghost of image 2 where it sits in its own frame; the SFT model does this much less. Single-image edits work equally well on both.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
+        "## MOSS-Image Edit on MOSS-Image Base (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_base_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_int8_convrot.safetensors) or [moss_image_base_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors) (MOSS-Image Base; the LoRA was trained on SFT, the SFT workflows use that)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*\u2026 (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (1024 here; upstream published 512) and the output takes the size of image 1. Lower it for faster edits.\n- LoRA strength 0.25 (upstream uses 1.0); raise it if an edit doesn't take.\n- **Two-image edits need a higher strength.** At 0.25 the output is just image 2; at 1.0 (tested) image 1 is kept and image 2 is added to it.\n- On Base, combining references often leaves a ghost of image 2 where it sits in its own frame; the SFT model does this much less. Single-image edits work equally well on both.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
       ],
       "widgets_values_named": {
         "text": "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*\u2026 (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
