@@ -53,9 +53,9 @@ class MOSSImageEditReferences(io.ComfyNode):
                     ),
                     tooltip="References in order. Each batch item counts as a reference of its own.",
                 ),
-                io.Int.Input("reference_max_edge", default=512, min=GRID, max=4096, step=GRID,
+                io.Int.Input("reference_max_edge", default=1024, min=GRID, max=4096, step=GRID,
                              tooltip="Longest side of each reference in pixels; smaller images are not upscaled. Sides round to multiples of 16, "
-                                     "without cropping. The LoRA was trained and published with 512."),
+                                     "without cropping. The LoRA was published with 512; 1024 keeps more detail of the input."),
                 io.Combo.Input("kv_cache", options=list(KV_CACHE_MODES), default="auto",
                                tooltip="The references don't depend on the step or the prompt. on: run them once per sampling run and keep "
                                        "their keys/values, about twice as fast (0.5 MB per reference token in bf16: 0.5 GB for a 512px "
@@ -71,7 +71,7 @@ class MOSSImageEditReferences(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, positive, negative, vae, images: io.Autogrow.Type, reference_max_edge=512, kv_cache="auto") -> io.NodeOutput:
+    def execute(cls, positive, negative, vae, images: io.Autogrow.Type, reference_max_edge=1024, kv_cache="auto") -> io.NodeOutput:
         items = []
         for name in sorted(images or {}, key=lambda name: int(name.rsplit("_", 1)[-1])):
             if images[name] is not None:

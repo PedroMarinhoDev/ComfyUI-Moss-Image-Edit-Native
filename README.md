@@ -68,6 +68,10 @@ Open a workflow from **Templates → ComfyUI-Moss-Image-Edit-Native**, or drop o
 
 The SFT workflows load `moss_image_sft_bf16`; pick `moss_image_sft_int8_convrot` in the loader for half the memory.
 
+All four default to LoRA strength **0.25** and 1024 px references (upstream: 1.0 and 512). At those settings single-image
+edits work but follow the input less closely than at 1.0. **Two-image edits need a higher strength:** at 0.25 the
+output is just image 2; at 1.0 image 1 is kept and image 2 is added (the two-image workflows say so on the LoRA node).
+
 They load `moss_edit_bicycle.png` / `moss_edit_basket.png`: copy [`example_inputs/`](example_inputs) to `ComfyUI/input`
 or pick your own images. The graph:
 
@@ -80,7 +84,7 @@ VAELoader ───────────────────────�
 ```
 
 - **MOSS-Image Edit References**: positive, negative, VAE and up to four images (each batch item counts as one).
-  Resizes them as upstream does (Lanczos, long edge ≤ `reference_max_edge`, default 512, sides rounded to 16, no crop)
+  Resizes them as upstream does (Lanczos, long edge ≤ `reference_max_edge`, default 1024 (upstream published 512), sides rounded to 16, no crop)
   and appends their latents to both conditionings. Its `latent` output is an empty latent the size of the first
   reference; any `EmptyFlux2LatentImage` size works too. Name the images in the prompt: *"Dress the person in image 1
   in the outfit from image 2."*
