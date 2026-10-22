@@ -25,7 +25,8 @@ import comfy.quant_ops
 from comfy.ldm.flux.layers import timestep_embedding
 from comfy.ldm.modules.attention import AttentionTensorContainer, optimized_attention
 
-KV_CACHE_OPTION = "moss_edit_kv_cache"  # transformer_options key: "auto", "on" or "off"
+KV_CACHE = "moss_edit_kv_cache"  # conditioning key and model input: "auto", "on" or "off"
+KV_CACHE_MODES = ("auto", "on", "off")
 KV_CACHE_FREE_FRACTION = 0.5  # "auto" caches when the keys/values take at most this share of the free memory
 
 
@@ -206,9 +207,8 @@ def free_memory(device):
     return free
 
 
-def cached_reference_kv(model, sets, dtype, device, transformer_options):
+def cached_reference_kv(model, sets, dtype, device, transformer_options, mode="auto"):
     """Per-set per-layer (k, v) from this run's cache, prefilling the missing sets. None means run the branch jointly instead."""
-    mode = transformer_options.get(KV_CACHE_OPTION, "auto")
     if mode == "off" or comfy.model_management.in_training:
         return None
     run = current_run(model, device, transformer_options)
@@ -240,7 +240,7 @@ def layer_kv(kvs, rows, i, batch):
     return torch.cat([kvs[r][i][0] for r in rows]), torch.cat([kvs[r][i][1] for r in rows])
 
 
-def forward_edit(self, x, timestep, context, transformer_options, ref_latents):
+def forward_edit(self, x, timestep, context, transformer_options, ref_latents, kv_cache="auto"):
     """moss.MOSSImage._forward with reference latents (a list of [B, C, h, w])."""
     B, _, H, W = x.shape
     dtype, device = x.dtype, x.device
@@ -253,7 +253,7 @@ def forward_edit(self, x, timestep, context, transformer_options, ref_latents):
 
     txt = self.text_embedder(context, pe[:, H * W:], transformer_options)
     sets, rows = reference_sets(ref_latents, B)
-    kvs = cached_reference_kv(self, sets, dtype, device, transformer_options)
+    kvs = cached_reference_kv(self, sets, dtype, device, transformer_options, kv_cache)
     if kvs is None:
         # no cache: the reference sets run as a batch of their own, block by block next to the target
         r, ref_pe, ref_mod = reference_inputs(self, [torch.cat([s[j] for s in sets]) for j in range(len(ref_latents))], dtype, device, transformer_options)

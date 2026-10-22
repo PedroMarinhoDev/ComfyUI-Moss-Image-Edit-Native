@@ -9,7 +9,7 @@ from typing_extensions import override
 import node_helpers
 from comfy_api.latest import ComfyExtension, io
 
-from .moss_edit.model import KV_CACHE_OPTION
+from .moss_edit.model import KV_CACHE, KV_CACHE_MODES
 
 MAX_REFERENCES = 4  # the LoRA was trained with one to four references
 GRID = 16
@@ -56,6 +56,12 @@ class MOSSImageEditReferences(io.ComfyNode):
                 io.Int.Input("reference_max_edge", default=512, min=GRID, max=4096, step=GRID,
                              tooltip="Longest side of each reference in pixels; smaller images are not upscaled. Sides round to multiples of 16, "
                                      "without cropping. The LoRA was trained and published with 512."),
+                io.Combo.Input("kv_cache", options=list(KV_CACHE_MODES), default="auto",
+                               tooltip="The references don't depend on the step or the prompt. on: run them once per sampling run and keep "
+                                       "their keys/values, about twice as fast (0.5 MB per reference token in bf16: 0.5 GB for a 512px "
+                                       "reference, 2 GB for 1024px). off: run them again at every step, no extra memory. auto: on when "
+                                       "the keys/values take at most half the free memory. Same image either way. Use off with LoRA "
+                                       "schedules (hooks) that change the weights during sampling."),
             ],
             outputs=[
                 io.Conditioning.Output(display_name="positive"),
@@ -65,7 +71,7 @@ class MOSSImageEditReferences(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, positive, negative, vae, images: io.Autogrow.Type, reference_max_edge=512) -> io.NodeOutput:
+    def execute(cls, positive, negative, vae, images: io.Autogrow.Type, reference_max_edge=512, kv_cache="auto") -> io.NodeOutput:
         items = []
         for name in sorted(images or {}, key=lambda name: int(name.rsplit("_", 1)[-1])):
             if images[name] is not None:
@@ -75,37 +81,9 @@ class MOSSImageEditReferences(io.ComfyNode):
         if len(items) > MAX_REFERENCES:
             logging.warning("MOSS-Image Edit: %d references, the LoRA was trained with at most %d.", len(items), MAX_REFERENCES)
         latents = [vae.encode(resize_reference(image, reference_max_edge)) for image in items]
-        positive = node_helpers.conditioning_set_values(positive, {"reference_latents": latents}, append=True)
-        negative = node_helpers.conditioning_set_values(negative, {"reference_latents": latents}, append=True)
+        positive, negative = [node_helpers.conditioning_set_values(node_helpers.conditioning_set_values(c, {"reference_latents": latents}, append=True),
+                                                                   {KV_CACHE: kv_cache}) for c in (positive, negative)]
         return io.NodeOutput(positive, negative, {"samples": torch.zeros_like(latents[0])})
-
-
-class MOSSImageEditOptions(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(
-            node_id="MOSSImageEditOptions",
-            display_name="MOSS-Image Edit Options",
-            category="advanced/model",
-            description="How MOSS-Image runs the reference branch. Optional: without this node it is auto.",
-            inputs=[
-                io.Model.Input("model"),
-                io.Combo.Input("kv_cache", options=["auto", "on", "off"], default="auto",
-                               tooltip="on: run the references once per sampling run and keep their keys/values (42 layers x 2 x tokens x 3072 values; "
-                                       "about 0.5 MB per reference token in bf16). off: run them again at every model call, using no extra memory. "
-                                       "auto: on when the keys/values take at most half the free memory. Use off with LoRA schedules (hooks) "
-                                       "that change the weights during sampling."),
-            ],
-            outputs=[io.Model.Output()],
-        )
-
-    @classmethod
-    def execute(cls, model, kv_cache="auto") -> io.NodeOutput:
-        model = model.clone()
-        transformer_options = model.model_options.get("transformer_options", {}).copy()
-        transformer_options[KV_CACHE_OPTION] = kv_cache
-        model.model_options["transformer_options"] = transformer_options
-        return io.NodeOutput(model)
 
 
 class MOSSImageEditExtension(ComfyExtension):
@@ -113,7 +91,6 @@ class MOSSImageEditExtension(ComfyExtension):
     async def get_node_list(self) -> list[type[io.ComfyNode]]:
         return [
             MOSSImageEditReferences,
-            MOSSImageEditOptions,
         ]
 
 

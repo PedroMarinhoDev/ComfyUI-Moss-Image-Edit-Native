@@ -417,7 +417,7 @@
       ],
       "size": [
         380,
-        138
+        182
       ],
       "flags": {},
       "order": 8,
@@ -462,6 +462,15 @@
             "name": "reference_max_edge"
           },
           "link": null
+        },
+        {
+          "localized_name": "kv_cache",
+          "name": "kv_cache",
+          "type": "COMBO",
+          "widget": {
+            "name": "kv_cache"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -494,10 +503,12 @@
         "Node name for S&R": "MOSSImageEditReferences"
       },
       "widgets_values": [
-        512
+        512,
+        "auto"
       ],
       "widgets_values_named": {
-        "reference_max_edge": 512
+        "reference_max_edge": 512,
+        "kv_cache": "auto"
       }
     },
     {
@@ -619,7 +630,7 @@
       ],
       "widgets_values_named": {
         "seed": 42,
-        "control_after_generate": "randomize",
+        "control_after_generate": "fixed",
         "steps": 30,
         "cfg": 4,
         "sampler_name": "euler",
@@ -770,38 +781,6 @@
       "CLIP"
     ],
     [
-      4,
-      6,
-      0,
-      8,
-      0,
-      "CONDITIONING"
-    ],
-    [
-      5,
-      7,
-      0,
-      8,
-      1,
-      "CONDITIONING"
-    ],
-    [
-      6,
-      4,
-      0,
-      8,
-      2,
-      "VAE"
-    ],
-    [
-      7,
-      5,
-      0,
-      8,
-      3,
-      "IMAGE"
-    ],
-    [
       8,
       2,
       0,
@@ -855,6 +834,38 @@
       0,
       11,
       0,
+      "IMAGE"
+    ],
+    [
+      4,
+      6,
+      0,
+      8,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      5,
+      7,
+      0,
+      8,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      4,
+      0,
+      8,
+      2,
+      "VAE"
+    ],
+    [
+      7,
+      5,
+      0,
+      8,
+      3,
       "IMAGE"
     ]
   ],
