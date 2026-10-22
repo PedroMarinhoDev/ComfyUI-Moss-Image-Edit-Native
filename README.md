@@ -83,7 +83,9 @@ VAELoader ───────────────────────�
   the official schedule.
 - ComfyUI's **Set Reference Latent** / **Set Reference Multi Latent** also work for the references; then the sizing is
   yours, and remember to add them to the negative too, as upstream does.
-- **MOSS-Image Edit Options** (optional, on the model): reference keys/values cache `auto` / `on` / `off`, see below.
+- `kv_cache` on the References node: `auto` (default) / `on` / `off`. `on` runs the references once per sampling run
+  and keeps their keys/values, about twice as fast; `off` uses no extra memory. Same image either way, see below.
+  References added with the stock nodes use `auto`.
 
 ## How it works
 
@@ -107,7 +109,7 @@ That costs 42 × 2 × tokens × 3072 values, about 0.5 MB per reference token in
 ≈ 0.5 GB). The cache lives as long as the run's sigmas tensor and is freed when sampling ends. `auto` caches when it
 takes at most half the free memory (counting dynamic-VRAM weights that can be evicted, as ComfyUI's own batching
 does) and otherwise runs the reference branch next to the target at every model call, logged once per run.
-Batched cond/uncond rows with the same references share one copy. Turn the cache off for LoRA schedules (hooks) that
+Batched cond/uncond rows with the same references share one copy. Set `kv_cache` to `off` for LoRA schedules (hooks) that
 change the weights during sampling.
 
 ## Results (RTX 4090, dynamic VRAM, `moss_image_sft_bf16` + `qwen3.5_9b_bf16` + `flux2-vae`, 30 steps, cfg 4)

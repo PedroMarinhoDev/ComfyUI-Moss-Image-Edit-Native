@@ -41,7 +41,6 @@ def main():
     import comfy.ldm.moss_image.model as moss
     import comfy.ops
     from moss_edit import patches
-    from moss_edit.model import KV_CACHE_OPTION
     patches.install()
 
     official = load_module("pipeline_moss_image", args.pipeline)
@@ -69,8 +68,8 @@ def main():
         assert not unexpected and all("comfy_attention" in k for k in missing), (missing, unexpected)
         return model
 
-    def run_options(sample_sigmas, uuids, sigma, mode):
-        return {"sample_sigmas": sample_sigmas, "uuids": uuids, "sigmas": torch.tensor([sigma]), KV_CACHE_OPTION: mode}
+    def run_options(sample_sigmas, uuids, sigma):
+        return {"sample_sigmas": sample_sigmas, "uuids": uuids, "sigmas": torch.tensor([sigma])}
 
     H, W = 6, 5
     refs = [torch.randn(1, 128, 4, 7), torch.randn(1, 128, 5, 3)]
@@ -100,7 +99,7 @@ def main():
             tag = "fused qkv" if fused else "q/k/v"
             ts = torch.tensor([t])
             check("[{}] no references == official transformer".format(tag), model(x, ts, pos), want_plain)
-            check("[{}] joint (no cache), 2 refs".format(tag), model(x, ts, pos, transformer_options={KV_CACHE_OPTION: "off"}, ref_latents=refs), want_pos)
+            check("[{}] joint (no cache), 2 refs".format(tag), model(x, ts, pos, ref_latents=refs, moss_edit_kv_cache="off"), want_pos)
             check("[{}] 1 ref".format(tag), model(x, ts, pos, ref_latents=refs[:1]), want_one)
 
             # one sampling run: cond then uncond at the first sigma, then a later step; one prefill shared by both
@@ -109,14 +108,14 @@ def main():
             original = sys.modules["moss_edit.model"].prefill
             sys.modules["moss_edit.model"].prefill = lambda *a, **k: calls.append(1) or original(*a, **k)
             try:
-                check("[{}] cached run, cond @0.9".format(tag), model(x, torch.tensor([0.9]), pos, transformer_options=run_options(sigmas, ["c"], 0.9, "on"), ref_latents=refs),
+                check("[{}] cached run, cond @0.9".format(tag), model(x, torch.tensor([0.9]), pos, transformer_options=run_options(sigmas, ["c"], 0.9), ref_latents=refs, moss_edit_kv_cache="on"),
                       editor(x, torch.tensor([0.9]), pos, reference_latents=refs))
-                check("[{}] cached run, uncond @0.9".format(tag), model(x, torch.tensor([0.9]), neg, transformer_options=run_options(sigmas, ["u"], 0.9, "on"), ref_latents=refs),
+                check("[{}] cached run, uncond @0.9".format(tag), model(x, torch.tensor([0.9]), neg, transformer_options=run_options(sigmas, ["u"], 0.9), ref_latents=refs, moss_edit_kv_cache="on"),
                       editor(x, torch.tensor([0.9]), neg, reference_latents=refs))
-                check("[{}] cached run, cond @t".format(tag), model(x, ts, pos, transformer_options=run_options(sigmas, ["c"], t, "on"), ref_latents=refs), want_pos)
+                check("[{}] cached run, cond @t".format(tag), model(x, ts, pos, transformer_options=run_options(sigmas, ["c"], t), ref_latents=refs, moss_edit_kv_cache="on"), want_pos)
                 assert len(calls) == 1, "expected one prefill per run, got {}".format(len(calls))
                 # the next run reuses the same sigmas tensor with new conds: it must not reuse the keys/values
-                model(x, torch.tensor([0.9]), pos, transformer_options=run_options(sigmas, ["c2"], 0.9, "on"), ref_latents=refs)
+                model(x, torch.tensor([0.9]), pos, transformer_options=run_options(sigmas, ["c2"], 0.9), ref_latents=refs, moss_edit_kv_cache="on")
                 assert len(calls) == 2, "a new run with the same sigmas tensor reused the cache"
                 del sigmas
                 assert not getattr(model, "_moss_edit_runs", {}), "the cache outlived its sigmas tensor"
@@ -126,7 +125,7 @@ def main():
             # cond and uncond batched together: same references, different text lengths can't batch, so pad by reusing pos
             xb = torch.cat([x, x])
             refs_b = [torch.cat([r, r]) for r in refs]
-            got = model(xb, torch.tensor([t, t]), torch.cat([pos, pos]), transformer_options=run_options(torch.tensor([t, 0.0]), ["a", "b"], t, "on"), ref_latents=refs_b)
+            got = model(xb, torch.tensor([t, t]), torch.cat([pos, pos]), transformer_options=run_options(torch.tensor([t, 0.0]), ["a", "b"], t), ref_latents=refs_b, moss_edit_kv_cache="on")
             check("[{}] batch of 2 sharing references".format(tag), got, torch.cat([want_pos, want_pos]))
             # rows with different references in one batch
             other = [torch.randn_like(r) for r in refs]
@@ -134,7 +133,7 @@ def main():
                 want_other = editor(x, torch.tensor([t]), pos, reference_latents=other)
             mixed = [torch.cat([a, b]) for a, b in zip(refs, other)]
             for mode in ("on", "off"):
-                got = model(xb, torch.tensor([t, t]), torch.cat([pos, pos]), transformer_options=run_options(torch.tensor([t, 0.0]), ["m" + mode, "n" + mode], t, mode), ref_latents=mixed)
+                got = model(xb, torch.tensor([t, t]), torch.cat([pos, pos]), transformer_options=run_options(torch.tensor([t, 0.0]), ["m" + mode, "n" + mode], t), ref_latents=mixed, moss_edit_kv_cache=mode)
                 check("[{}] batch of 2, different references, cache {}".format(tag, mode), got, torch.cat([want_pos, want_other]))
 
             # a skip-layer-guidance style block replacement that only calls the original block

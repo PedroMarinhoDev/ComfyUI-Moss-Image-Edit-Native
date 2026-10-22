@@ -417,7 +417,7 @@
       ],
       "size": [
         380,
-        158
+        202
       ],
       "flags": {},
       "order": 9,
@@ -469,6 +469,15 @@
             "name": "reference_max_edge"
           },
           "link": null
+        },
+        {
+          "localized_name": "kv_cache",
+          "name": "kv_cache",
+          "type": "COMBO",
+          "widget": {
+            "name": "kv_cache"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -501,10 +510,12 @@
         "Node name for S&R": "MOSSImageEditReferences"
       },
       "widgets_values": [
-        512
+        512,
+        "auto"
       ],
       "widgets_values_named": {
-        "reference_max_edge": 512
+        "reference_max_edge": 512,
+        "kv_cache": "auto"
       }
     },
     {
@@ -626,7 +637,7 @@
       ],
       "widgets_values_named": {
         "seed": 1,
-        "control_after_generate": "randomize",
+        "control_after_generate": "fixed",
         "steps": 30,
         "cfg": 4,
         "sampler_name": "euler",
@@ -805,10 +816,10 @@
       "title": "Read me",
       "properties": {},
       "widgets_values": [
-        "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*\u2026 (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
+        "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*… (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
       ],
       "widgets_values_named": {
-        "text": "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*\u2026 (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
+        "text": "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your images; refer to them in the instruction as *image 1*, *image 2*… (up to four, image 1 is the one being edited) and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
       },
       "color": "#432",
       "bgcolor": "#653"
@@ -838,46 +849,6 @@
       7,
       0,
       "CLIP"
-    ],
-    [
-      4,
-      6,
-      0,
-      8,
-      0,
-      "CONDITIONING"
-    ],
-    [
-      5,
-      7,
-      0,
-      8,
-      1,
-      "CONDITIONING"
-    ],
-    [
-      6,
-      4,
-      0,
-      8,
-      2,
-      "VAE"
-    ],
-    [
-      7,
-      5,
-      0,
-      8,
-      3,
-      "IMAGE"
-    ],
-    [
-      8,
-      52,
-      0,
-      8,
-      4,
-      "IMAGE"
     ],
     [
       9,
@@ -933,6 +904,46 @@
       0,
       11,
       0,
+      "IMAGE"
+    ],
+    [
+      4,
+      6,
+      0,
+      8,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      5,
+      7,
+      0,
+      8,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      4,
+      0,
+      8,
+      2,
+      "VAE"
+    ],
+    [
+      7,
+      5,
+      0,
+      8,
+      3,
+      "IMAGE"
+    ],
+    [
+      8,
+      52,
+      0,
+      8,
+      4,
       "IMAGE"
     ]
   ],
