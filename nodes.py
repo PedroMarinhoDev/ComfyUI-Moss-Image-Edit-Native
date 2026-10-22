@@ -12,6 +12,9 @@ from comfy_api.latest import ComfyExtension, io
 from .moss_edit.model import KV_CACHE, KV_CACHE_MODES
 
 MAX_REFERENCES = 4  # the LoRA was trained with one to four references
+# Moss-Image-Edit's layout in ComfyUI's own MOSS edit support (Comfy-Org/ComfyUI#17296), which this pack's model
+# hooks stand down for; without it that code takes the ai-toolkit layout. The pack's own hooks ignore it.
+REFERENCE_METHOD = "index_timestep_zero_text_start"
 GRID = 16
 
 
@@ -82,7 +85,7 @@ class MOSSImageEditReferences(io.ComfyNode):
             logging.warning("MOSS-Image Edit: %d references, the LoRA was trained with at most %d.", len(items), MAX_REFERENCES)
         latents = [vae.encode(resize_reference(image, reference_max_edge)) for image in items]
         positive, negative = [node_helpers.conditioning_set_values(node_helpers.conditioning_set_values(c, {"reference_latents": latents}, append=True),
-                                                                   {KV_CACHE: kv_cache}) for c in (positive, negative)]
+                                                                   {KV_CACHE: kv_cache, "reference_latents_method": REFERENCE_METHOD}) for c in (positive, negative)]
         return io.NodeOutput(positive, negative, {"samples": torch.zeros_like(latents[0])})
 
 

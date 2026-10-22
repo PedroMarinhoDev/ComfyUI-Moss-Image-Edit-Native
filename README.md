@@ -91,7 +91,8 @@ VAELoader ───────────────────────�
 - Upstream defaults: 30 steps, cfg 4, shift 5 (the model's default), empty negative. `euler` + `simple` reproduces
   the official schedule.
 - ComfyUI's **Set Reference Latent** / **Set Reference Multi Latent** also work for the references; then the sizing is
-  yours, and remember to add them to the negative too, as upstream does.
+  yours, and remember to add them to the negative too, as upstream does. With ComfyUI's own MOSS edit support (below)
+  also set the method to `index_timestep_zero_text_start`; the References node does that for you.
 - `kv_cache` on the References node: `auto` (default) / `on` / `off`. `on` runs the references once per sampling run
   and keeps their keys/values, about twice as fast; `off` uses no extra memory. Same image either way, see below.
   References added with the stock nodes use `auto`.
@@ -120,6 +121,15 @@ takes at most half the free memory (counting dynamic-VRAM weights that can be ev
 does) and otherwise runs the reference branch next to the target at every model call, logged once per run.
 Batched cond/uncond rows with the same references share one copy. Set `kv_cache` to `off` for LoRA schedules (hooks) that
 change the weights during sampling.
+
+### With ComfyUI's own MOSS edit support
+
+[Comfy-Org/ComfyUI#17296](https://github.com/Comfy-Org/ComfyUI/pull/17296) (open) adds MOSS edit LoRAs to ComfyUI
+itself. When a ComfyUI with it loads this pack, the model hooks stand down and ComfyUI's code runs the references; the
+References node, its sizing, the LoRA conversion and the workflows keep working. The node sets
+`reference_latents_method` to `index_timestep_zero_text_start`, Moss-Image-Edit's layout there: without a method that
+code takes the ai-toolkit layout, which puts the image and text at other RoPE positions than this LoRA was trained with.
+ComfyUI's code precomputes the reference keys/values itself, so `kv_cache` has no effect there.
 
 ## Results (RTX 4090, dynamic VRAM, `moss_image_sft_bf16` + `qwen3.5_9b_bf16` + `flux2-vae`, 30 steps, cfg 4)
 
@@ -162,6 +172,10 @@ for multi-reference edits.
   cached and uncached, cond+uncond sharing one prefill, cache invalidation between runs, mixed-reference batches,
   block replacement. Agreement is ~1e-6 relative.
 - `tests/test_lora_keys.py`: every LoRA tensor (converted and raw) maps onto the native model, unfused and fused.
+- `tests/test_conditioning_path.py`: the References node's conditioning through the model's `extra_conds` and the DiT,
+  against upstream, positive and negative. Run it on a ComfyUI with #17296 applied too: there it checks that this pack
+  stands down and that ComfyUI's code, given the node's method, matches upstream (~1e-6), while the same references
+  without the method do not (~6e-3).
 
 ```bash
 CUDA_VISIBLE_DEVICES="" ComfyUI/.venv/bin/python tests/test_equivalence.py --comfy ComfyUI \
@@ -169,6 +183,8 @@ CUDA_VISIBLE_DEVICES="" ComfyUI/.venv/bin/python tests/test_equivalence.py --com
 CUDA_VISIBLE_DEVICES="" ComfyUI/.venv/bin/python tests/test_lora_keys.py --comfy ComfyUI \
     --model ComfyUI/models/diffusion_models/moss_image_sft_bf16.safetensors \
     --converted ComfyUI/models/loras/moss_image_edit_lora_bf16.safetensors --raw /tmp/moss-edit/adapter_model.safetensors
+CUDA_VISIBLE_DEVICES="" ComfyUI/.venv/bin/python tests/test_conditioning_path.py --comfy ComfyUI \
+    --pipeline MOSS-Image-SFT/pipeline_moss_image.py --upstream ComfyUI-Moss-Image-Edit
 ```
 
 ## Credits and license
