@@ -29,10 +29,12 @@ VISION_BLOCK = "<|vision_start|><|image_pad|><|vision_end|>"
 
 def resize_reference(image, max_edge):
     """One IMAGE item (H, W, C) -> [1, h, w, 3]: upstream's Lanczos resize of 8-bit pixels, each side rounded to 16
-    and the long edge capped at max_edge, without cropping."""
+    and the long edge capped at max_edge (0: the image's own long edge), without cropping."""
     pixels = image[:, :, :3].float().cpu().clamp(0, 1)
     picture = Image.fromarray((pixels * 255).round().to(torch.uint8).numpy())
     width, height = picture.size
+    if max_edge == 0:
+        max_edge = max(GRID, int(math.floor(max(width, height) / GRID + 0.5)) * GRID)
     limit = max_edge // GRID * GRID
     scale = min(1.0, limit / max(width, height))
 
@@ -123,9 +125,11 @@ class MOSSImageEditTextEncode(io.ComfyNode):
                     template=io.Autogrow.TemplateNames(io.Image.Input("image"), names=[f"image_{i}" for i in range(1, MAX_REFERENCES + 1)], min=1),
                     tooltip="References in order; image 1 is the one being edited. Each batch item counts as a reference of its own.",
                 ),
-                io.Int.Input("reference_max_edge", default=1024, min=GRID, max=4096, step=GRID,
+                io.Int.Input("reference_max_edge", default=1024, min=0, max=4096, step=GRID,
                              tooltip="Longest side of each reference latent in pixels; smaller images are not upscaled. Lanczos, sides "
-                                     "rounded to 16, no crop. Tested best: 1024, with the output the same size."),
+                                     "rounded to 16, no crop. 0: each image at its own size (rounded to 16), so with output_max_edge 0 the "
+                                     "output is image 1's size; large images cost time and memory (0.5 MB of cached keys/values per 256 "
+                                     "pixels). Tested best: 1024, with the output the same size."),
                 io.Int.Input("output_max_edge", default=0, min=0, max=4096, step=GRID,
                              tooltip="0 (recommended): the output latent is the size of reference 1. Otherwise its longest side, in "
                                      "image 1's aspect. Both LoRAs edit best when the output and the references are the same size; "
@@ -182,9 +186,10 @@ class MOSSImageEditReferences(io.ComfyNode):
                     ),
                     tooltip="References in order. Each batch item counts as a reference of its own.",
                 ),
-                io.Int.Input("reference_max_edge", default=1024, min=GRID, max=4096, step=GRID,
+                io.Int.Input("reference_max_edge", default=1024, min=0, max=4096, step=GRID,
                              tooltip="Longest side of each reference in pixels; smaller images are not upscaled. Sides round to multiples of 16, "
-                                     "without cropping. The LoRA was published with 512; 1024 keeps more detail of the input."),
+                                     "without cropping. 0: each image at its own size (rounded to 16). The LoRA was published with 512; "
+                                     "1024 keeps more detail of the input."),
                 io.Combo.Input("kv_cache", options=list(KV_CACHE_MODES), default="auto",
                                tooltip="The references don't depend on the step or the prompt. on: run them once per sampling run and keep "
                                        "their keys/values, about twice as fast (0.5 MB per reference token in bf16: 0.5 GB for a 512px "
