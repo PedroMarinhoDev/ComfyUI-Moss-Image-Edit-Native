@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-moss-image-edit-native"
 description = "Moss-Image-Edit (reference image editing LoRA) on ComfyUI's native MOSS-Image model, with ComfyUI's loaders, LoRA loader, samplers and memory management."
-version = "0.1.0"
+version = "0.2.0"
 license = { text = "GPL-3.0" }
 dependencies = []
 

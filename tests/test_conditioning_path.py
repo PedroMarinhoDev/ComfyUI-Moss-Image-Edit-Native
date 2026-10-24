@@ -2,7 +2,7 @@
 DiT. Moss-Image-Edit conditioning (the References node) against upstream's MossEditModel; ai-toolkit conditioning
 (layout, and image-token attention bias as the Text Encode node sets for image_strength) saved on one ComfyUI and
 compared on another. Run it on a ComfyUI with native MOSS edit support (Comfy-Org/ComfyUI#17296 and #17320, ComfyUI
-after 0.42.1) with --save, then on one without, where this pack's hooks do the work, with --compare:
+master) with --save, then on one without (a 0.42 release, or master before them), where this pack's hooks do the work, with --compare:
 
     CUDA_VISIBLE_DEVICES="" python tests/test_conditioning_path.py --comfy <ComfyUI master> ... --save native.pt
     CUDA_VISIBLE_DEVICES="" python tests/test_conditioning_path.py --comfy ~/AI/ComfyUI \

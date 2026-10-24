@@ -397,8 +397,8 @@ Encodes the instruction and its negative with one to four images, in the layout 
 
 The older, chinoll-only node: adds references to conditioning from `CLIPTextEncode`. ComfyUI's **Set Reference Latent**
 works too, with **Edit Model Reference Method** after it set to the LoRA's layout (`index_timestep_zero_text_start` for
-chinoll; references without a method take HQ's `index_timestep_zero_isolated`; the MOSS options are in ComfyUI after
-0.42.1). The sizing is then yours, the negative needs the references too, and HQ's prompt then has no images, which
+chinoll; references without a method take HQ's `index_timestep_zero_isolated`; the MOSS options are on ComfyUI master,
+not yet in a release). The sizing is then yours, the negative needs the references too, and HQ's prompt then has no images, which
 costs it text edits.
 
 ## How it works
@@ -428,8 +428,8 @@ uncond, and in both layouts. They are computed once per sampling run and reused:
 when it fits in half the free memory, counting dynamic-VRAM weights that can be evicted. Set `kv_cache` to `off` for
 LoRA schedules (hooks) that change the weights during sampling.
 
-**With ComfyUI's own MOSS edit support.** ComfyUI after 0.42.1 supports MOSS edit LoRAs itself
-([#17296](https://github.com/Comfy-Org/ComfyUI/pull/17296), [#17320](https://github.com/Comfy-Org/ComfyUI/pull/17320)).
+**With ComfyUI's own MOSS edit support.** ComfyUI master supports MOSS edit LoRAs itself (not yet in a release; 0.42.5
+doesn't have it) ([#17296](https://github.com/Comfy-Org/ComfyUI/pull/17296), [#17320](https://github.com/Comfy-Org/ComfyUI/pull/17320)).
 There the pack's model hooks stand down and ComfyUI's code runs the references. The nodes, the sizing, the LoRA
 conversion and the workflows keep working, since they use ComfyUI's conditioning keys and method names. ComfyUI's code
 always keeps the reference keys/values, so `kv_cache` has no effect there.

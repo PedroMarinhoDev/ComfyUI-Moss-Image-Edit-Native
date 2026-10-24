@@ -118,10 +118,15 @@ def text_embed(model, context, pe, transformer_options, mask=None):
     return x
 
 
+def rope_axes(model):
+    # RoPE size per axis: rope_axes_dim on ComfyUI master since #17172, the pe_embedder's axes_dim in the 0.42 releases
+    axes = getattr(model, "rope_axes_dim", None)
+    return axes if axes is not None else model.pe_embedder.axes_dim
+
+
 def body_rope(model, h, w, text_len, device, transformer_options={}, f_offset=0):
-    # moss.MOSSImage.rope with the image and text moved by f_offset on the f axis
-    if f_offset == 0:
-        return model.rope(h, w, text_len, device, transformer_options)
+    # moss.MOSSImage.rope (master's, with rope_options) with the image and text moved by f_offset on the f axis.
+    # Built here rather than through model.rope, whose signature differs between ComfyUI versions.
     rope_options = transformer_options.get("rope_options", {})
     scales = (1.0, 1.0, rope_options.get("scale_y", 1.0), rope_options.get("scale_x", 1.0))
     ids = torch.zeros(1, h * w + text_len, 4, device=device, dtype=torch.float32)
@@ -129,7 +134,7 @@ def body_rope(model, h, w, text_len, device, transformer_options={}, f_offset=0)
     ids[0, :h * w, 2] = ((torch.arange(h, device=device, dtype=torch.float32) - (h - 1) / 2) * float(scales[2] != 0) + rope_options.get("shift_y", 0.0)).repeat_interleave(w)
     ids[0, :h * w, 3] = ((torch.arange(w, device=device, dtype=torch.float32) - (w - 1) / 2) * float(scales[3] != 0) + rope_options.get("shift_x", 0.0)).repeat(h)
     ids[0, h * w:, 1] = torch.arange(text_len, device=device, dtype=torch.float32) + f_offset
-    pe = torch.cat([comfy.ldm.flux.math.rope(ids[..., i], d, 10000 * (s or 1.0) ** (-d / (d - 2))) for i, (d, s) in enumerate(zip(model.rope_axes_dim, scales))], dim=-3)
+    pe = torch.cat([comfy.ldm.flux.math.rope(ids[..., i], d, 10000 * (s or 1.0) ** (-d / (d - 2))) for i, (d, s) in enumerate(zip(rope_axes(model), scales))], dim=-3)
     return pe.unsqueeze(1).transpose(1, 2).contiguous()
 
 
@@ -156,7 +161,7 @@ def reference_rope(model, shapes, device, transformer_options={}):
         part[:, 3] = ((torch.arange(w, device=device, dtype=torch.float32) - (w - 1) / 2) * float(scales[3] != 0)).repeat(h)
         ids.append(part)
     ids = torch.cat(ids).unsqueeze(0)
-    pe = torch.cat([comfy.ldm.flux.math.rope(ids[..., i], d, 10000 * (s or 1.0) ** (-d / (d - 2))) for i, (d, s) in enumerate(zip(model.rope_axes_dim, scales))], dim=-3)
+    pe = torch.cat([comfy.ldm.flux.math.rope(ids[..., i], d, 10000 * (s or 1.0) ** (-d / (d - 2))) for i, (d, s) in enumerate(zip(rope_axes(model), scales))], dim=-3)
     return pe.unsqueeze(1).transpose(1, 2).contiguous()
 
 
