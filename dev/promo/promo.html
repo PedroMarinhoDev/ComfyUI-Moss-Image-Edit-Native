@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MOSS-Image Edit promo</title>
+<style>
+@font-face { font-family: Anton; src: url(fonts/anton.woff2) format("woff2"); }
+@font-face { font-family: Oswald; src: url(fonts/oswald.woff2) format("woff2"); font-weight: 200 700; }
+@font-face { font-family: "IBM Plex Sans"; src: url(fonts/IBMPlexSans-Regular.ttf); font-weight: 400; }
+@font-face { font-family: "IBM Plex Sans"; src: url(fonts/IBMPlexSans-Medium.ttf); font-weight: 500; }
+@font-face { font-family: "IBM Plex Sans"; src: url(fonts/IBMPlexSans-SemiBold.ttf); font-weight: 600; }
+@font-face { font-family: "IBM Plex Sans"; src: url(fonts/IBMPlexSans-Bold.ttf); font-weight: 700; }
+@font-face { font-family: "IBM Plex Mono"; src: url(fonts/IBMPlexMono-Regular.ttf); font-weight: 400; }
+@font-face { font-family: "IBM Plex Mono"; src: url(fonts/IBMPlexMono-Medium.ttf); font-weight: 500; }
+:root { --bg: #0D1117; --card: #151B23; --ink: #F0F6FC; --muted: #9198A1; --line: #30363D; --accent: #A371F7;
+        --good: #3FB950; --bad: #F85149; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--ink);
+             font-family: "IBM Plex Sans", sans-serif; }
+.layer { position: absolute; inset: 0; opacity: 0; }
+.handle { position: absolute; right: 64px; top: 40px; font: 600 40px Oswald; color: rgba(240, 246, 252, .62); z-index: 60;
+          letter-spacing: .01em; }
+/* step headings */
+.step { position: absolute; left: 96px; top: 46px; }
+.step .row { display: flex; align-items: baseline; gap: 22px; }
+.step .num { font: 600 46px Oswald; color: var(--accent); letter-spacing: .08em; }
+.step h2 { margin: 0; font: 400 84px/1 Anton; letter-spacing: .005em; text-transform: uppercase; }
+.step p { margin: 12px 0 0; font: 400 30px "IBM Plex Sans"; color: var(--muted); white-space: nowrap; }
+.step p b { color: var(--ink); font-weight: 600; }
+/* image frames: a before/after pair stacked, the after one revealed by a wipe */
+.frame { position: absolute; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #000;
+         box-shadow: 0 30px 80px rgba(0,0,0,.55); }
+.frame img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.frame .after { clip-path: inset(0 100% 0 0); }
+.frame .wipe { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #fff;
+               box-shadow: 0 0 18px rgba(163,113,247,.9); opacity: 0; }
+.badge { position: absolute; padding: 5px 14px; border-radius: 9px; background: rgba(13,17,23,.80); font: 600 24px Oswald;
+         letter-spacing: .1em; color: var(--ink); white-space: nowrap; }
+.badge.tl { left: 14px; top: 12px; }
+.badge.tr { right: 14px; top: 12px; }
+.badge.bl { left: 14px; bottom: 12px; }
+.badge b { color: var(--accent); font-weight: 600; }
+.caption { position: absolute; font: 600 26px Oswald; letter-spacing: .16em; color: var(--muted); white-space: nowrap; }
+.caption b { color: var(--accent); font-weight: 600; }
+/* prompt card */
+.prompt { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 30px; }
+.prompt .k { font: 600 24px Oswald; letter-spacing: .2em; color: var(--accent); }
+.prompt .x { margin-top: 14px; font: 500 34px/1.45 "IBM Plex Mono"; color: var(--ink); white-space: pre-wrap; min-height: 200px; }
+.caret { display: inline-block; width: 3px; height: 1.05em; background: var(--accent); vertical-align: -0.15em; margin-left: 2px; }
+.nodechip { position: absolute; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
+            font: 500 26px "IBM Plex Sans"; white-space: nowrap; color: var(--muted); }
+.nodechip b { color: var(--ink); font-weight: 600; }
+.nodechip i { color: var(--accent); font-style: normal; font-weight: 600; }
+/* the prompt line under a scene */
+.ticker { position: absolute; left: 96px; right: 96px; font: 500 30px "IBM Plex Mono"; color: var(--ink); white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+.ticker small { font: 600 24px Oswald; letter-spacing: .18em; color: var(--accent); margin-right: 18px; }
+/* edit-type grid */
+.tile { position: absolute; }
+.tile .frame { position: relative; width: 100%; height: 252px; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+.tile.on .frame { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 16px 40px rgba(0,0,0,.5); }
+.tile .name { margin-top: 12px; font: 600 28px Oswald; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: baseline; }
+.tile .name small { font: 500 20px "IBM Plex Sans"; color: var(--muted); letter-spacing: 0; }
+.tile .name em { font: 600 18px Oswald; font-style: normal; letter-spacing: .14em; color: var(--accent); padding: 2px 9px;
+                 border: 1px solid var(--accent); border-radius: 7px; }
+.plus { position: absolute; font: 400 96px/1 Anton; color: var(--muted); }
+.arrow { position: absolute; height: 6px; border-radius: 3px; background: var(--accent); transform-origin: 0 50%; }
+.arrow::after { content: ""; position: absolute; right: -6px; top: -11px; border-left: 22px solid var(--accent);
+                border-top: 14px solid transparent; border-bottom: 14px solid transparent; }
+/* LoRA cards */
+.lora { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; }
+.lora.on { border-color: var(--accent); }
+.lora .t { font: 600 34px Oswald; letter-spacing: .04em; }
+.lora .t b { color: var(--accent); font-weight: 600; }
+.lora .r { margin-top: 4px; font: 400 21px "IBM Plex Mono"; color: var(--muted); }
+.lora ul { margin: 14px 0 0; padding: 0 0 0 22px; font: 400 23px/1.45 "IBM Plex Sans"; color: var(--muted); }
+.lora ul b { color: var(--ink); font-weight: 600; }
+/* findings */
+.fcard { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px 26px; }
+.fcard .t { font: 400 46px/1 Anton; text-transform: uppercase; letter-spacing: .01em; }
+.fcard .t b { color: var(--accent); font-weight: 400; }
+.fcard .row { display: flex; gap: 10px; margin-top: 20px; }
+.fcard .cell { flex: 1; text-align: center; }
+.fcard .cell img { width: 100%; height: 440px; object-fit: cover; display: block; border-radius: 10px; border: 2px solid transparent; }
+.fcard .cell.good img { border-color: var(--good); }
+.fcard .row.stack { flex-direction: column; gap: 4px; }
+.fcard .row.stack .cell img { height: 210px; }
+.fcard .cell span { display: block; margin-top: 8px; font: 600 22px Oswald; letter-spacing: .08em; color: var(--muted); }
+.fcard .cell.good span { color: var(--good); }
+.fcard .d { margin-top: 18px; font: 400 25px/1.4 "IBM Plex Sans"; color: var(--muted); }
+.fcard .d b { color: var(--ink); font-weight: 600; }
+.chips { position: absolute; display: flex; flex-wrap: wrap; gap: 12px; }
+.chip { padding: 9px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); font: 500 26px "IBM Plex Sans";
+        color: var(--ink); white-space: nowrap; }
+.chip b { color: var(--accent); font-weight: 600; }
+.count { position: absolute; font: 400 92px/1 Anton; color: var(--accent); white-space: nowrap; }
+.count small { font: 600 34px Oswald; color: var(--muted); letter-spacing: .12em; margin-left: 14px; }
+/* native */
+.diagram { position: absolute; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--bg);
+           box-shadow: 0 30px 80px rgba(0,0,0,.55); }
+.diagram img { width: 100%; height: 100%; display: block; }
+/* title and outro */
+.mosaic { position: absolute; inset: -40px 0; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+.mosaic .mrow { display: flex; gap: 14px; }
+.mosaic img { width: 380px; height: 260px; object-fit: cover; border-radius: 10px; flex: none; }
+.shade { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(13,17,23,.74) 0%, rgba(13,17,23,.92) 60%, rgba(13,17,23,.98) 100%); }
+.titlebox { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.kicker { font: 600 38px Oswald; letter-spacing: .30em; color: var(--accent); margin-right: -.30em; }
+.bigtitle { font: 400 230px/0.95 Anton; letter-spacing: .01em; margin: 8px 0 6px; }
+.tagline { font: 600 50px Oswald; letter-spacing: .12em; color: var(--ink); margin-right: -.12em; }
+.tagline span { color: var(--accent); }
+.pill { margin-top: 30px; padding: 8px 22px; border-radius: 30px; border: 2px solid var(--accent); color: var(--accent);
+        font: 600 28px Oswald; letter-spacing: .18em; margin-right: -.18em; }
+.url { margin-top: 18px; font: 500 38px "IBM Plex Mono"; color: var(--ink); padding: 12px 26px; border-radius: 14px;
+       border: 1px solid var(--line); background: rgba(21,27,35,.92); }
+.url small { color: var(--muted); font: 500 26px Oswald; letter-spacing: .14em; margin-right: 18px; }
+.sub2 { margin-top: 26px; font: 400 32px "IBM Plex Sans"; color: var(--muted); }
+.sub2 b { color: var(--accent); font-weight: 600; }
+.fine { margin-top: 14px; font: 400 22px "IBM Plex Sans"; color: #6e7681; }
+</style>
+</head>
+<body>
+<div class="handle">@LatentSpacer</div>
+
+<div class="layer" id="L-title">
+  <div class="mosaic" id="mosaic1"></div><div class="shade"></div>
+  <div class="titlebox">
+    <div class="kicker" id="t-kicker">INSTRUCTION EDITING · NATIVE IN COMFYUI</div>
+    <div class="bigtitle" id="t-big">MOSS-IMAGE EDIT</div>
+    <div class="tagline" id="t-tag">EDIT ANY IMAGE WITH <span>ONE SENTENCE</span></div>
+    <div class="pill" id="t-pill">NOW WITH THE HQ LORA</div>
+  </div>
+</div>
+
+<div class="layer" id="L-type">
+  <div class="step" id="s1"><div class="row"><span class="num">01</span><h2>Say what to change</h2></div>
+    <p>Load an image, write the edit, and <b>everything else stays</b>.</p></div>
+  <div id="e-frames"></div>
+  <div class="prompt" id="e-prompt" style="left:1260px; top:250px; width:564px"><div class="k">PROMPT</div><div class="x" id="e-text"></div></div>
+  <div class="nodechip" id="e-chip1" style="left:1260px; top:610px">Load Image → <b>MOSS-Image Edit Text Encode</b></div>
+  <div class="nodechip" id="e-chip2" style="left:1260px; top:680px">→ KSampler → <b>your edit</b></div>
+  <div class="nodechip" id="e-lora" style="left:1260px; top:750px"></div>
+</div>
+
+<div class="layer" id="L-grid">
+  <div class="step" id="s2"><div class="row"><span class="num">02</span><h2>Many kinds of edit</h2></div>
+    <p>Scenes, objects, materials, people. Every result is <b>seed 42, no rerolls</b>.</p></div>
+  <div id="g-tiles"></div>
+  <div class="ticker" id="g-ticker" style="top:946px"></div>
+</div>
+
+<div class="layer" id="L-multi">
+  <div class="step" id="s3"><div class="row"><span class="num">03</span><h2>Combine images</h2></div>
+    <p>Up to <b>four images</b>: refer to them as image 1, image 2 in the prompt.</p></div>
+  <div id="m-frames"></div>
+  <div class="ticker" id="m-ticker" style="top:830px"></div>
+</div>
+
+<div class="layer" id="L-lora">
+  <div class="step" id="s4"><div class="row"><span class="num">04</span><h2>Two edit LoRAs</h2></div>
+    <p>One switch, <b>edit_format</b>: each LoRA gets the layout it was trained with.</p></div>
+  <div id="l-frames"></div>
+  <div class="lora" id="l-c" style="left:1440px; top:230px; width:384px">
+    <div class="t"><b>chinoll</b></div><div class="r">chinoll/Moss-Image-Edit</div>
+    <ul><li>references before the text</li><li>tested at <b>CFG 5</b></li></ul></div>
+  <div class="lora" id="l-h" style="left:1440px; top:500px; width:384px">
+    <div class="t"><b>HQ</b> · NEW</div><div class="r">akhaliq/MOSS-Image-Edit-HQ</div>
+    <ul><li>ai-toolkit layout; the text encoder <b>sees the images</b></li><li>tested at <b>CFG 3</b></li></ul></div>
+  <div class="ticker" id="l-ticker" style="top:884px; right:520px"></div>
+</div>
+
+<div class="layer" id="L-tested">
+  <div class="step" id="s5"><div class="row"><span class="num">05</span><h2>Tested defaults</h2></div>
+    <p>Every default in the nodes and workflows comes from <b>side-by-side test runs</b>.</p></div>
+  <div class="count" id="f-count" style="right:96px; top:112px"></div>
+  <div id="f-cards"></div>
+  <div class="chips" id="f-chips" style="left:96px; right:96px; top:968px"></div>
+</div>
+
+<div class="layer" id="L-native">
+  <div class="step" id="s6"><div class="row"><h2>Native ComfyUI nodes</h2></div>
+    <p>No wrapped pipeline: ComfyUI's own <b>MOSS-Image</b>, LoRA loader, KSampler and memory management.</p></div>
+  <div class="diagram" id="n-diagram" style="left:160px; top:226px; width:1600px; height:704px"><img id="n-img"></div>
+  <div class="chips" id="n-chips" style="left:160px; right:160px; top:960px; justify-content:center"></div>
+</div>
+
+<div class="layer" id="L-outro">
+  <div class="mosaic" id="mosaic2"></div><div class="shade"></div>
+  <div class="titlebox">
+    <div class="kicker">FREE · OPEN SOURCE · FOR COMFYUI</div>
+    <div class="bigtitle" style="font-size:112px; margin:14px 0 22px">COMFYUI-MOSS-IMAGE-EDIT-NATIVE</div>
+    <div class="url"><small>NODES</small>github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native</div>
+    <div class="url"><small>LORA</small>huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI</div>
+    <div class="sub2">Works with the <b>chinoll</b> and <b>HQ</b> edit LoRAs on MOSS-Image SFT.</div>
+    <div class="fine">LoRAs by chinoll and akhaliq. MOSS-Image by OpenMOSS. Example images made with FLUX.2 Klein.</div>
+  </div>
+</div>
+
+<script type="module" src="promo.js"></script>
+</body>
+</html>
