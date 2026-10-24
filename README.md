@@ -68,9 +68,11 @@ being edited; name them in the prompt: *"Dress the woman in image 1 in the jacke
 
 - `edit_format`: the layout the LoRA was trained with. For ai-toolkit LoRAs (HQ) the text encoder also sees each image,
   at most 384² px, as "Picture N:" before the prompt, in both the positive and the negative, as ai-toolkit trains.
-- `reference_max_edge` 1024 (Lanczos, sides rounded to 16, no crop; 0 keeps each image at its own size) and
-  `output_max_edge` 0: the output latent is the size of image 1's reference. Keep them equal, see below. Both at 0 edit
-  image 1 at its own resolution; large images cost time and memory.
+- `reference_max_edge` 0 (default): each image is resized, up or down, to the 1 MP size closest to its own aspect
+  ratio (sides multiples of 16, within 0.6% of the aspect, no crop): a 4032×3024 photo and a 640×480 one both become
+  1168×880, 832×1216 becomes 848×1232. That keeps the input's shape at the size the LoRAs edit best at. A number instead
+  caps the longest side, never upscaling (Lanczos as upstream).
+- `output_max_edge` 0 (default): the output latent is the size of image 1's reference. Keep the two equal, see below.
 - `kv_cache`: keep the references' keys/values for the sampling run (about twice as fast) or recompute them every step.
   Same image either way.
 - `image_strength` (advanced, HQ): weights the images in the prompt; 1 is as trained.
@@ -90,7 +92,7 @@ types, SFT and Base, two seeds each. The test scripts and every image are in a s
 | | chinoll | HQ |
 |:--|:--|:--|
 | LoRA strength | **1.0** | **1.0** |
-| references / output | same size, 1024 | same size, 1024 |
+| references / output | same size, 1 MP (`reference_max_edge` 0, `output_max_edge` 0) | same |
 | CFG | **5** | **3** |
 | negative pass | skip layer 22 (the official MOSS sampler default) | skip layer 22 (ai-toolkit's default) |
 | steps, sampler | 30, euler / simple | 30, euler / simple |
