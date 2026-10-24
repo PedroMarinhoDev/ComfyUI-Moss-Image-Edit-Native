@@ -17,6 +17,7 @@ MAX_REFERENCES = 4  # the LoRAs were trained with one to four references
 # same to this pack's model hooks and to ComfyUI's own MOSS edit support, which takes ai-toolkit's layout without one
 REFERENCE_METHOD = TEXT_START
 GRID = 16
+BUCKET_PIXELS = 1024 * 1024  # reference_max_edge 0: about the size the model and the LoRAs were trained and tested at
 # edit LoRA formats: the reference layout, and whether the text encoder also sees the references (ai-toolkit's
 # "Picture N:" vision prompt)
 EDIT_FORMATS = {
@@ -27,21 +28,38 @@ VISION_MAX_PIXELS = 384 * 384  # ai-toolkit's vlm_max_pixels: the vision tower s
 VISION_BLOCK = "<|vision_start|><|image_pad|><|vision_end|>"
 
 
+def bucket(width, height, max_pixels=BUCKET_PIXELS):
+    """The multiple-of-16 size closest to the image's aspect ratio with at most max_pixels: about 1 MP, the size the
+    model and the LoRAs edit best at, whatever the image's own size."""
+    aspect = width / height
+    best = None
+    h = math.sqrt(max_pixels / aspect)
+    for bh in {max(GRID, int(h // GRID) * GRID), max(GRID, int(h // GRID) * GRID + GRID)}:
+        for bw in {max(GRID, int(bh * aspect // GRID) * GRID), max(GRID, int(bh * aspect // GRID) * GRID + GRID)}:
+            if bw * bh > max_pixels:
+                continue
+            # closest aspect first, then the larger area
+            key = (abs(math.log(bw / bh / aspect)), -bw * bh)
+            if best is None or key < best[0]:
+                best = (key, (bw, bh))
+    return best[1]
+
+
 def resize_reference(image, max_edge):
-    """One IMAGE item (H, W, C) -> [1, h, w, 3]: upstream's Lanczos resize of 8-bit pixels, each side rounded to 16
-    and the long edge capped at max_edge (0: the image's own long edge), without cropping."""
+    """One IMAGE item (H, W, C) -> [1, h, w, 3], Lanczos on 8-bit pixels as upstream, no crop. max_edge 0: the 1 MP
+    bucket of the image's aspect ratio (up or down). Otherwise each side rounded to 16 and the long edge capped at
+    max_edge, never upscaled."""
     pixels = image[:, :, :3].float().cpu().clamp(0, 1)
     picture = Image.fromarray((pixels * 255).round().to(torch.uint8).numpy())
     width, height = picture.size
     if max_edge == 0:
-        max_edge = max(GRID, int(math.floor(max(width, height) / GRID + 0.5)) * GRID)
-    limit = max_edge // GRID * GRID
-    scale = min(1.0, limit / max(width, height))
-
-    def aligned(value):
-        return min(limit, max(GRID, int(math.floor(value * scale / GRID + 0.5)) * GRID))
-
-    picture = picture.resize((aligned(width), aligned(height)), Image.Resampling.LANCZOS)
+        size = bucket(width, height)
+    else:
+        limit = max_edge // GRID * GRID
+        scale = min(1.0, limit / max(width, height))
+        size = tuple(min(limit, max(GRID, int(math.floor(value * scale / GRID + 0.5)) * GRID)) for value in (width, height))
+    if size != (width, height):
+        picture = picture.resize(size, Image.Resampling.LANCZOS)
     return torch.from_numpy(np.asarray(picture, dtype=np.float32) / 255.0)[None]
 
 
@@ -125,11 +143,10 @@ class MOSSImageEditTextEncode(io.ComfyNode):
                     template=io.Autogrow.TemplateNames(io.Image.Input("image"), names=[f"image_{i}" for i in range(1, MAX_REFERENCES + 1)], min=1),
                     tooltip="References in order; image 1 is the one being edited. Each batch item counts as a reference of its own.",
                 ),
-                io.Int.Input("reference_max_edge", default=1024, min=0, max=4096, step=GRID,
-                             tooltip="Longest side of each reference latent in pixels; smaller images are not upscaled. Lanczos, sides "
-                                     "rounded to 16, no crop. 0: each image at its own size (rounded to 16), so with output_max_edge 0 the "
-                                     "output is image 1's size; large images cost time and memory (0.5 MB of cached keys/values per 256 "
-                                     "pixels). Tested best: 1024, with the output the same size."),
+                io.Int.Input("reference_max_edge", default=0, min=0, max=4096, step=GRID,
+                             tooltip="0 (recommended): each reference is resized, up or down, to the 1 MP size closest to its own aspect "
+                                     "ratio (sides multiples of 16, no crop), about the size the LoRAs edit best at; with output_max_edge 0 "
+                                     "the output takes image 1's. Otherwise the longest side in pixels, never upscaled."),
                 io.Int.Input("output_max_edge", default=0, min=0, max=4096, step=GRID,
                              tooltip="0 (recommended): the output latent is the size of reference 1. Otherwise its longest side, in "
                                      "image 1's aspect. Both LoRAs edit best when the output and the references are the same size; "
@@ -150,7 +167,7 @@ class MOSSImageEditTextEncode(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, clip, vae, prompt, negative_prompt, edit_format, images: io.Autogrow.Type, reference_max_edge=1024,
+    def execute(cls, clip, vae, prompt, negative_prompt, edit_format, images: io.Autogrow.Type, reference_max_edge=0,
                 output_max_edge=0, kv_cache="auto", image_strength=1.0) -> io.NodeOutput:
         method, vision = EDIT_FORMATS[edit_format]
         items = reference_items(images)
@@ -186,10 +203,9 @@ class MOSSImageEditReferences(io.ComfyNode):
                     ),
                     tooltip="References in order. Each batch item counts as a reference of its own.",
                 ),
-                io.Int.Input("reference_max_edge", default=1024, min=0, max=4096, step=GRID,
-                             tooltip="Longest side of each reference in pixels; smaller images are not upscaled. Sides round to multiples of 16, "
-                                     "without cropping. 0: each image at its own size (rounded to 16). The LoRA was published with 512; "
-                                     "1024 keeps more detail of the input."),
+                io.Int.Input("reference_max_edge", default=0, min=0, max=4096, step=GRID,
+                             tooltip="0 (recommended): each reference is resized, up or down, to the 1 MP size closest to its own aspect "
+                                     "ratio (sides multiples of 16, no crop). Otherwise the longest side in pixels, never upscaled."),
                 io.Combo.Input("kv_cache", options=list(KV_CACHE_MODES), default="auto",
                                tooltip="The references don't depend on the step or the prompt. on: run them once per sampling run and keep "
                                        "their keys/values, about twice as fast (0.5 MB per reference token in bf16: 0.5 GB for a 512px "
@@ -206,7 +222,7 @@ class MOSSImageEditReferences(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, positive, negative, vae, images: io.Autogrow.Type, reference_max_edge=1024, kv_cache="auto") -> io.NodeOutput:
+    def execute(cls, positive, negative, vae, images: io.Autogrow.Type, reference_max_edge=0, kv_cache="auto") -> io.NodeOutput:
         items = reference_items(images)
         latents = [vae.encode(resize_reference(image, reference_max_edge)) for image in items]
         positive, negative = [node_helpers.conditioning_set_values(node_helpers.conditioning_set_values(c, {"reference_latents": latents}, append=True),
