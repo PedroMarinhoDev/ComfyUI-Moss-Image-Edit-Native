@@ -12,6 +12,7 @@
 </p>
 
 <p align="center">
+  <a href="https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss-image-edit-promo.mp4"><b>Watch the overview (62 s)</b></a> ·
   <a href="#install">Install</a> ·
   <a href="#workflows">Workflows</a> ·
   <a href="#gallery">Gallery</a> ·
