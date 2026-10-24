@@ -68,8 +68,9 @@ being edited; name them in the prompt: *"Dress the woman in image 1 in the jacke
 
 - `edit_format`: the layout the LoRA was trained with. For ai-toolkit LoRAs (HQ) the text encoder also sees each image,
   at most 384² px, as "Picture N:" before the prompt, in both the positive and the negative, as ai-toolkit trains.
-- `reference_max_edge` 1024 (Lanczos, sides rounded to 16, no crop) and `output_max_edge` 0: the output latent is the
-  size of image 1's reference. Keep them equal, see below.
+- `reference_max_edge` 1024 (Lanczos, sides rounded to 16, no crop; 0 keeps each image at its own size) and
+  `output_max_edge` 0: the output latent is the size of image 1's reference. Keep them equal, see below. Both at 0 edit
+  image 1 at its own resolution; large images cost time and memory.
 - `kv_cache`: keep the references' keys/values for the sampling run (about twice as fast) or recompute them every step.
   Same image either way.
 - `image_strength` (advanced, HQ): weights the images in the prompt; 1 is as trained.
