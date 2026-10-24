@@ -1,8 +1,8 @@
 {
-  "id": "2db9b50a-dbc7-4c9d-b8d8-e2be0e83ed8d",
+  "id": "6be769c9-94b8-4933-ace8-634ff1e3b2db",
   "revision": 0,
   "last_node_id": 12,
-  "last_link_id": 14,
+  "last_link_id": 12,
   "nodes": [
     {
       "id": 1,
@@ -48,7 +48,7 @@
           ]
         }
       ],
-      "title": "MOSS-Image SFT (bf16 or int8)",
+      "title": "MOSS-Image SFT",
       "properties": {
         "Node name for S&R": "UNETLoader"
       },
@@ -107,17 +107,17 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            8
+            2
           ]
         }
       ],
-      "title": "Moss-Image-Edit LoRA",
+      "title": "Moss-Image-Edit LoRA (chinoll)",
       "properties": {
         "Node name for S&R": "LoraLoaderModelOnly"
       },
       "widgets_values": [
         "moss_image_edit_lora_bf16.safetensors",
-        0.25
+        1
       ],
       "widgets_values_named": {
         "lora_name": "moss_image_edit_lora_bf16.safetensors",
@@ -126,6 +126,91 @@
     },
     {
       "id": 3,
+      "type": "SkipLayerGuidanceDiTSimple",
+      "pos": [
+        430,
+        140
+      ],
+      "size": [
+        380,
+        130
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "localized_name": "double_layers",
+          "name": "double_layers",
+          "type": "STRING",
+          "widget": {
+            "name": "double_layers"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "single_layers",
+          "name": "single_layers",
+          "type": "STRING",
+          "widget": {
+            "name": "single_layers"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "start_percent",
+          "name": "start_percent",
+          "type": "FLOAT",
+          "widget": {
+            "name": "start_percent"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "end_percent",
+          "name": "end_percent",
+          "type": "FLOAT",
+          "widget": {
+            "name": "end_percent"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "title": "Skip layer 22 on the negative pass",
+      "properties": {
+        "Node name for S&R": "SkipLayerGuidanceDiTSimple"
+      },
+      "widgets_values": [
+        "",
+        "22",
+        0,
+        1
+      ],
+      "widgets_values_named": {
+        "double_layers": "",
+        "single_layers": "22",
+        "start_percent": 0,
+        "end_percent": 1
+      }
+    },
+    {
+      "id": 4,
       "type": "CLIPLoader",
       "pos": [
         0,
@@ -174,7 +259,6 @@
           "name": "CLIP",
           "type": "CLIP",
           "links": [
-            2,
             3
           ]
         }
@@ -195,7 +279,7 @@
       }
     },
     {
-      "id": 4,
+      "id": 5,
       "type": "VAELoader",
       "pos": [
         0,
@@ -225,8 +309,8 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            6,
-            13
+            4,
+            11
           ]
         }
       ],
@@ -242,7 +326,7 @@
       }
     },
     {
-      "id": 5,
+      "id": 6,
       "type": "LoadImage",
       "pos": [
         0,
@@ -281,7 +365,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            7
+            5
           ]
         },
         {
@@ -305,15 +389,15 @@
       }
     },
     {
-      "id": 6,
-      "type": "CLIPTextEncode",
+      "id": 8,
+      "type": "MOSSImageEditTextEncode",
       "pos": [
         430,
-        140
+        330
       ],
       "size": [
         380,
-        200
+        520
       ],
       "flags": {},
       "order": 6,
@@ -323,135 +407,52 @@
           "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
-          "link": 2
-        },
-        {
-          "localized_name": "text",
-          "name": "text",
-          "type": "STRING",
-          "widget": {
-            "name": "text"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "CONDITIONING",
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            4
-          ]
-        }
-      ],
-      "title": "Edit instruction",
-      "properties": {
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "Paint the bicycle bright red, keeping the ivy, the brick wall and the lighting the same."
-      ],
-      "widgets_values_named": {
-        "text": "Paint the bicycle bright red, keeping the ivy, the brick wall and the lighting the same."
-      }
-    },
-    {
-      "id": 7,
-      "type": "CLIPTextEncode",
-      "pos": [
-        430,
-        380
-      ],
-      "size": [
-        380,
-        120
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "clip",
-          "name": "clip",
-          "type": "CLIP",
           "link": 3
-        },
-        {
-          "localized_name": "text",
-          "name": "text",
-          "type": "STRING",
-          "widget": {
-            "name": "text"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "CONDITIONING",
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            5
-          ]
-        }
-      ],
-      "title": "Negative (empty)",
-      "properties": {
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        ""
-      ],
-      "widgets_values_named": {
-        "text": ""
-      }
-    },
-    {
-      "id": 8,
-      "type": "MOSSImageEditReferences",
-      "pos": [
-        430,
-        540
-      ],
-      "size": [
-        380,
-        182
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "positive",
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 4
-        },
-        {
-          "localized_name": "negative",
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 5
         },
         {
           "localized_name": "vae",
           "name": "vae",
           "type": "VAE",
-          "link": 6
+          "link": 4
         },
         {
           "localized_name": "image_1",
           "name": "images.image_1",
           "type": "IMAGE",
-          "link": 7
+          "link": 5
         },
         {
           "localized_name": "image_2",
           "name": "images.image_2",
           "shape": 7,
           "type": "IMAGE",
+          "link": null
+        },
+        {
+          "localized_name": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "negative_prompt",
+          "name": "negative_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "negative_prompt"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "edit_format",
+          "name": "edit_format",
+          "type": "COMBO",
+          "widget": {
+            "name": "edit_format"
+          },
           "link": null
         },
         {
@@ -464,11 +465,29 @@
           "link": null
         },
         {
+          "localized_name": "output_max_edge",
+          "name": "output_max_edge",
+          "type": "INT",
+          "widget": {
+            "name": "output_max_edge"
+          },
+          "link": null
+        },
+        {
           "localized_name": "kv_cache",
           "name": "kv_cache",
           "type": "COMBO",
           "widget": {
             "name": "kv_cache"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "image_strength",
+          "name": "image_strength",
+          "type": "FLOAT",
+          "widget": {
+            "name": "image_strength"
           },
           "link": null
         }
@@ -479,7 +498,7 @@
           "name": "positive",
           "type": "CONDITIONING",
           "links": [
-            9
+            7
           ]
         },
         {
@@ -487,7 +506,7 @@
           "name": "negative",
           "type": "CONDITIONING",
           "links": [
-            10
+            8
           ]
         },
         {
@@ -495,20 +514,30 @@
           "name": "latent",
           "type": "LATENT",
           "links": [
-            11
+            9
           ]
         }
       ],
       "properties": {
-        "Node name for S&R": "MOSSImageEditReferences"
+        "Node name for S&R": "MOSSImageEditTextEncode"
       },
       "widgets_values": [
+        "Paint the bicycle bright red, keeping the ivy, the brick wall and the lighting the same.",
+        "",
+        "Moss-Image-Edit (chinoll)",
         1024,
-        "auto"
+        0,
+        "auto",
+        1
       ],
       "widgets_values_named": {
-        "reference_max_edge": 512,
-        "kv_cache": "auto"
+        "prompt": "Paint the bicycle bright red, keeping the ivy, the brick wall and the lighting the same.",
+        "negative_prompt": "",
+        "edit_format": "Moss-Image-Edit (chinoll)",
+        "reference_max_edge": 1024,
+        "output_max_edge": 0,
+        "kv_cache": "auto",
+        "image_strength": 1
       }
     },
     {
@@ -523,32 +552,32 @@
         480
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 8
+          "link": 6
         },
         {
           "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 9
+          "link": 7
         },
         {
           "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 10
+          "link": 8
         },
         {
           "localized_name": "latent_image",
           "name": "latent_image",
           "type": "LATENT",
-          "link": 11
+          "link": 9
         },
         {
           "localized_name": "seed",
@@ -611,11 +640,11 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            12
+            10
           ]
         }
       ],
-      "title": "KSampler (30 steps, cfg 4, euler/simple)",
+      "title": "KSampler (30 steps, cfg 5)",
       "properties": {
         "Node name for S&R": "KSampler"
       },
@@ -623,16 +652,16 @@
         42,
         "fixed",
         30,
-        4,
+        5,
         "euler",
         "simple",
         1
       ],
       "widgets_values_named": {
         "seed": 42,
-        "control_after_generate": "fixed",
+        "control_after_generate": "randomize",
         "steps": 30,
-        "cfg": 4,
+        "cfg": 5,
         "sampler_name": "euler",
         "scheduler": "simple",
         "denoise": 1
@@ -650,20 +679,20 @@
         46
       ],
       "flags": {},
-      "order": 10,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "samples",
           "name": "samples",
           "type": "LATENT",
-          "link": 12
+          "link": 10
         },
         {
           "localized_name": "vae",
           "name": "vae",
           "type": "VAE",
-          "link": 13
+          "link": 11
         }
       ],
       "outputs": [
@@ -672,7 +701,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            14
+            12
           ]
         }
       ],
@@ -692,14 +721,14 @@
         620
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 14
+          "link": 12
         },
         {
           "localized_name": "filename_prefix",
@@ -721,22 +750,22 @@
       ],
       "properties": {},
       "widgets_values": [
-        "MOSS-Image-Edit/edit"
+        "MOSS-Image-Edit/moss_image_edit"
       ],
       "widgets_values_named": {
-        "filename_prefix": "MOSS-Image-Edit/edit"
+        "filename_prefix": "MOSS-Image-Edit/moss_image_edit"
       }
     },
     {
       "id": 12,
       "type": "MarkdownNote",
       "pos": [
-        -520,
+        -540,
         0
       ],
       "size": [
-        480,
-        760
+        500,
+        900
       ],
       "flags": {},
       "order": 4,
@@ -746,10 +775,10 @@
       "title": "Read me",
       "properties": {},
       "widgets_values": [
-        "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your image and describe the change.\n- References are resized to `reference_max_edge` (1024 here; upstream published 512) and the output takes the size of image 1. Lower it for faster edits.\n- LoRA strength 0.25 (upstream uses 1.0); raise it if an edit doesn't take.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
+        "## Moss-Image-Edit LoRA (chinoll) on MOSS-Image SFT\n\nNative ComfyUI nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) or a bf16 Qwen3.5-9B (with its vision tower)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Settings (tested on 14 edit types, see the README)**\n\n- LoRA strength **1.0**: lower strengths redraw the scene instead of editing it.\n- References and output the **same size** (reference_max_edge 1024, output_max_edge 0); smaller references zoom the image out.\n- CFG 5, 30 steps, euler / simple, layer 22 skipped on the negative pass (the official MOSS sampler default).\n- Empty negative, as both LoRAs were trained.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
       ],
       "widgets_values_named": {
-        "text": "## MOSS-Image Edit (native ComfyUI)\n\nEdits images with the [Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA on ComfyUI's native MOSS-Image, using the nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) (or a bf16 Qwen3.5-9B)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Use**\n\n- Load your image and describe the change.\n- References are resized to `reference_max_edge` (512, as the LoRA was trained); the output takes the size of image 1. Raise both for larger edits.\n- Upstream defaults: 30 steps, cfg 4, euler / simple, empty negative.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
+        "text": "## Moss-Image-Edit LoRA (chinoll) on MOSS-Image SFT\n\nNative ComfyUI nodes from [ComfyUI-Moss-Image-Edit-Native](https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native).\n\n**Models**\n\n- `diffusion_models`: [moss_image_sft_bf16](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors) or [moss_image_sft_int8_convrot](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors)\n- `loras`: [moss_image_edit_lora_bf16](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI/resolve/main/moss_image_edit_lora_bf16.safetensors)\n- `text_encoders`: [qwen3.5_9b_w4a8_gptq](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors) or a bf16 Qwen3.5-9B (with its vision tower)\n- `vae`: [flux2-vae_small](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors) or flux2-vae (same encoder)\n\n**Settings (tested on 14 edit types, see the README)**\n\n- LoRA strength **1.0**: lower strengths redraw the scene instead of editing it.\n- References and output the **same size** (reference_max_edge 1024, output_max_edge 0); smaller references zoom the image out.\n- CFG 5, 30 steps, euler / simple, layer 22 skipped on the negative pass (the official MOSS sampler default).\n- Empty negative, as both LoRAs were trained.\n- Example inputs: `example_inputs/` in the node pack, copy them to `ComfyUI/input`."
       },
       "color": "#432",
       "bgcolor": "#653"
@@ -766,30 +795,46 @@
     ],
     [
       2,
+      2,
+      0,
       3,
       0,
+      "MODEL"
+    ],
+    [
+      3,
+      4,
+      0,
+      8,
+      0,
+      "CLIP"
+    ],
+    [
+      4,
+      5,
+      0,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      5,
       6,
       0,
-      "CLIP"
-    ],
-    [
-      3,
-      3,
-      0,
-      7,
-      0,
-      "CLIP"
-    ],
-    [
       8,
       2,
+      "IMAGE"
+    ],
+    [
+      6,
+      3,
       0,
       9,
       0,
       "MODEL"
     ],
     [
-      9,
+      7,
       8,
       0,
       9,
@@ -797,7 +842,7 @@
       "CONDITIONING"
     ],
     [
-      10,
+      8,
       8,
       1,
       9,
@@ -805,67 +850,35 @@
       "CONDITIONING"
     ],
     [
-      11,
+      9,
       8,
       2,
       9,
       3,
       "LATENT"
+    ],
+    [
+      10,
+      9,
+      0,
+      10,
+      0,
+      "LATENT"
+    ],
+    [
+      11,
+      5,
+      0,
+      10,
+      1,
+      "VAE"
     ],
     [
       12,
-      9,
-      0,
-      10,
-      0,
-      "LATENT"
-    ],
-    [
-      13,
-      4,
-      0,
-      10,
-      1,
-      "VAE"
-    ],
-    [
-      14,
       10,
       0,
       11,
       0,
-      "IMAGE"
-    ],
-    [
-      4,
-      6,
-      0,
-      8,
-      0,
-      "CONDITIONING"
-    ],
-    [
-      5,
-      7,
-      0,
-      8,
-      1,
-      "CONDITIONING"
-    ],
-    [
-      6,
-      4,
-      0,
-      8,
-      2,
-      "VAE"
-    ],
-    [
-      7,
-      5,
-      0,
-      8,
-      3,
       "IMAGE"
     ]
   ],
@@ -873,10 +886,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.43636363636363634,
+      "scale": 0.9,
       "offset": [
-        263.3333333333335,
-        235
+        416,
+        110
       ]
     }
   },

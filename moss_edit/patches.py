@@ -1,8 +1,9 @@
 """Hooks that add reference latents to ComfyUI's native MOSS-Image model.
 
-- model_base.MOSSImage passes the conditioning's "reference_latents" (from this pack's node, Set Reference Latent or
-  Set Reference Multi Latent) to the DiT as ref_latents, with the node's kv_cache setting, and counts their tokens
-  in the memory estimate.
+- model_base.MOSSImage passes the conditioning's "reference_latents" (from this pack's nodes, Set Reference Latent or
+  Set Reference Multi Latent) to the DiT as ref_latents, with their layout ("reference_latents_method"), the nodes'
+  kv_cache setting and the prompt's image-token weights ("context_attention_bias"), and counts their tokens in the
+  memory estimate. The keys are ComfyUI's own, so the conditioning works the same with its native MOSS edit support.
 - The DiT runs the edit forward (model.py) when ref_latents are present; without them it is the stock forward.
 - comfy.lora_convert also accepts the upstream adapter_model.safetensors as it is published.
 Each hook stands down when ComfyUI handles the same thing itself.
@@ -41,6 +42,12 @@ def _patch_model_base():
         kv_cache = kwargs.get(KV_CACHE, None)
         if kv_cache is not None:
             out[KV_CACHE] = comfy.conds.CONDConstant(kv_cache)
+        method = kwargs.get("reference_latents_method", None)
+        if method is not None and "ref_latents_method" not in out:
+            out["ref_latents_method"] = comfy.conds.CONDConstant(method)
+        bias = kwargs.get("context_attention_bias", None)
+        if bias is not None and "context_attention_bias" not in out:
+            out["context_attention_bias"] = comfy.conds.CONDRegular(bias)
         return out
 
     def extra_conds_shapes(self, **kwargs):
@@ -59,10 +66,12 @@ def _patch_model_base():
 def _patch_dit():
     original_forward = MOSSImageDiT._forward
 
-    def _forward(self, x, timestep, context, transformer_options={}, ref_latents=None, moss_edit_kv_cache="auto", **kwargs):
+    def _forward(self, x, timestep, context, transformer_options={}, ref_latents=None, moss_edit_kv_cache="auto",
+                 ref_latents_method=None, context_attention_bias=None, **kwargs):
         if not ref_latents:
             return original_forward(self, x, timestep, context, transformer_options, **kwargs)
-        return forward_edit(self, x, timestep, context, transformer_options, ref_latents, moss_edit_kv_cache)
+        return forward_edit(self, x, timestep, context, transformer_options, ref_latents, moss_edit_kv_cache,
+                            ref_latents_method, context_attention_bias)
 
     MOSSImageDiT._forward = _forward
 

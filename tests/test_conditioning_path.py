@@ -1,9 +1,12 @@
-"""CPU check of the whole path: MOSS-Image Edit References conditioning -> the model's extra_conds as the sampler calls
-them -> the DiT, against upstream's MossEditModel. Run it on a ComfyUI with or without native MOSS edit support
-(Comfy-Org/ComfyUI#17296): with it this pack's model hooks stand down and that code must take the Moss-Image-Edit layout.
+"""CPU check of the whole path: this pack's conditioning -> the model's extra_conds as the sampler calls them -> the
+DiT. Moss-Image-Edit conditioning (the References node) against upstream's MossEditModel; ai-toolkit conditioning
+(layout, and image-token attention bias as the Text Encode node sets for image_strength) saved on one ComfyUI and
+compared on another. Run it on a ComfyUI with native MOSS edit support (Comfy-Org/ComfyUI#17296 and #17320, ComfyUI
+after 0.42.1) with --save, then on one without, where this pack's hooks do the work, with --compare:
 
-    CUDA_VISIBLE_DEVICES="" ~/AI/ComfyUI/.venv/bin/python tests/test_conditioning_path.py --comfy ~/AI/ComfyUI \
-        --pipeline <MOSS-Image-SFT>/pipeline_moss_image.py --upstream <ComfyUI-Moss-Image-Edit clone>
+    CUDA_VISIBLE_DEVICES="" python tests/test_conditioning_path.py --comfy <ComfyUI master> ... --save native.pt
+    CUDA_VISIBLE_DEVICES="" python tests/test_conditioning_path.py --comfy ~/AI/ComfyUI \
+        --pipeline <MOSS-Image-SFT>/pipeline_moss_image.py --upstream <ComfyUI-Moss-Image-Edit at f70d118> --compare native.pt
 """
 import argparse
 import importlib.util
@@ -39,6 +42,8 @@ def main():
     parser.add_argument("--pipeline", type=Path, required=True, help="official pipeline_moss_image.py")
     parser.add_argument("--upstream", type=Path, required=True, help="clone of Chenkin-x/ComfyUI-Moss-Image-Edit")
     parser.add_argument("--threads", type=int, default=8)
+    parser.add_argument("--save", type=Path, help="save the ai-toolkit outputs here")
+    parser.add_argument("--compare", type=Path, help="compare the ai-toolkit outputs with ones saved by --save")
     args = parser.parse_args()
     torch.set_num_threads(args.threads)
     torch.manual_seed(0)
@@ -80,6 +85,10 @@ def main():
                 "negative": editor(x, torch.tensor([t]), neg, reference_latents=refs)}
 
     failures = []
+    saved = torch.load(args.compare) if args.compare else None
+    outputs = {}
+    bias = torch.zeros(1, pos.shape[1])
+    bias[0, 2:6] = 0.7  # as image_strength 2 would put on four image tokens
 
     def check(label, got, ref, tol=2e-4, expect_match=True):
         err = ((got - ref).abs().max() / ref.abs().max()).item()
@@ -122,6 +131,17 @@ def main():
             got, keys = run(conditionings["positive"], drop=("reference_latents_method",))
             check(f"[{tag}] positive without the method (ai-toolkit layout, should differ)", got, want["positive"], expect_match=False)
 
+        # ai-toolkit conditioning, as the Text Encode node builds it
+        for name, values in (("ai-toolkit", {}), ("ai-toolkit + image-token bias", {"context_attention_bias": bias})):
+            conditioning = [[pos, {"reference_latents": refs, "reference_latents_method": "index_timestep_zero_isolated", **values}]]
+            got, keys = run(conditioning)
+            outputs[f"{tag} {name}"] = got
+            if saved is not None:
+                check(f"[{tag}] {name}: same as the saved run  {keys}", got, saved[f"{tag} {name}"])
+
+    if args.save:
+        torch.save(outputs, args.save)
+        print("saved", sorted(outputs), "to", args.save)
     print("FAILED: " + ", ".join(failures) if failures else "all checks passed")
     sys.exit(1 if failures else 0)
 
