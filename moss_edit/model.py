@@ -1,12 +1,18 @@
-"""Reference editing on ComfyUI's native MOSS-Image DiT, for the Moss-Image-Edit LoRA (huggingface.co/chinoll/Moss-Image-Edit).
+"""Reference editing on ComfyUI's native MOSS-Image DiT, for MOSS-Image edit LoRAs.
 
-The LoRA's edit contract, "ref-prefix-only-t0__target-text-original-moss-v1":
-- the reference latents go through the same blocks at timestep 0, with RoPE position (r=index+1, f=0, h, w centered),
-  and attend only to each other;
-- the target and text tokens keep the stock joint attention, timestep and RoPE, and also attend to the reference keys/values.
+Both supported layouts run the reference latents through the same blocks at timestep 0, on RoPE axis r = index + 1 with
+their rows and columns centered, attending only to each other; the target and text keep the stock joint attention and
+timestep, and also attend to the reference keys/values. They differ in where the references sit on the f axis:
+- "index_timestep_zero_text_start", Moss-Image-Edit (huggingface.co/chinoll/Moss-Image-Edit, its edit contract
+  "ref-prefix-only-t0__target-text-original-moss-v1"): f = 0, the text's start; the image keeps f = text length.
+- "index_timestep_zero_isolated", ai-toolkit's MOSS-Image edit training with kv_cache (e.g.
+  huggingface.co/akhaliq/MOSS-Image-Edit-HQ): f = the image's frame, the text length. Shifting the image and text by
+  -text length instead keeps the references at f = 0: RoPE only sees differences, and their keys stay prompt-independent.
+The method names are ComfyUI's (comfy/model_base.py MOSSImage), so conditioning means the same with or without this pack.
 
-The reference branch never sees the text or the target, so its per-layer keys/values are the same at every step and for
-cond and uncond. They are computed once per sampling run and reused (upstream's prepare_cache), unless they don't fit.
+The reference branch never sees the text or the target, so its per-layer keys/values are the same at every step, for
+cond and uncond and for both layouts. They are computed once per sampling run and reused (upstream's prepare_cache),
+unless they don't fit.
 """
 import logging
 import math
@@ -28,6 +34,10 @@ from comfy.ldm.modules.attention import AttentionTensorContainer, optimized_atte
 KV_CACHE = "moss_edit_kv_cache"  # conditioning key and model input: "auto", "on" or "off"
 KV_CACHE_MODES = ("auto", "on", "off")
 KV_CACHE_FREE_FRACTION = 0.5  # "auto" caches when the keys/values take at most this share of the free memory
+TEXT_START = "index_timestep_zero_text_start"  # Moss-Image-Edit
+ISOLATED = "index_timestep_zero_isolated"  # ai-toolkit with kv_cache, ComfyUI's default for MOSS references
+LAYOUTS = (TEXT_START, ISOLATED)
+_warned_methods = set()
 
 
 def norm_rope(block, q, k, pe):
@@ -53,9 +63,9 @@ def qkv(block, x, mod):
     return block.proj["q"](y), block.proj["k"](y), block.proj["v"](y)
 
 
-def attend(block, q, k, v, transformer_options):
+def attend(block, q, k, v, transformer_options, mask=None):
     q, k, v = AttentionTensorContainer(q), AttentionTensorContainer(k), AttentionTensorContainer(v)
-    return optimized_attention(q, k, v, block.num_heads, transformer_options=transformer_options, preferred_attention=block.comfy_attention)
+    return optimized_attention(q, k, v, block.num_heads, mask=mask, transformer_options=transformer_options, preferred_attention=block.comfy_attention)
 
 
 def finish(block, x, out, mod):
@@ -81,13 +91,57 @@ def reference_block(block, r, mod, pe, transformer_options, last=False):
     return finish(block, r, out, mod), (k, v)
 
 
-def body_block(block, x, mod, pe, ref_kv, transformer_options):
+def body_block(block, x, mod, pe, ref_kv, transformer_options, mask=None):
     """moss.Block.forward where the target and text also attend to the reference keys/values."""
     q, k, v = qkv(block, x, mod)
     q, k = norm_rope(block, q, k, pe)
     k = torch.cat((k, ref_kv[0]), dim=1)
     v = torch.cat((v, ref_kv[1]), dim=1)
-    return finish(block, x, attend(block, q, k, v, transformer_options), mod)
+    return finish(block, x, attend(block, q, k, v, transformer_options, mask), mod)
+
+
+def text_embed(model, context, pe, transformer_options, mask=None):
+    """moss.TextEmbedder.forward, with an optional additive attention bias on the text keys."""
+    if mask is None:
+        return model.text_embedder(context, pe, transformer_options)
+    embedder = model.text_embedder
+    x = embedder.proj(context)
+    queue = comfy.model_prefetch.make_prefetch_queue(list(embedder.blocks), x.device, transformer_options)
+    for block in embedder.blocks:
+        comfy.model_prefetch.prefetch_queue_pop(queue, x.device, block, x.dtype)
+        q, k, v = block.qkv(block.norm1(x)).chunk(3, dim=-1)
+        q, k = norm_rope(block, q, k, pe)
+        x = x + block.proj(attend(block, q, k, v, transformer_options, mask))
+        y = block.norm2(x)
+        x = x + block.ffn_down(moss.situ(block.ffn_up(y), block.ffn_gate(y)))
+    comfy.model_prefetch.prefetch_queue_pop(queue, x.device, None)
+    return x
+
+
+def body_rope(model, h, w, text_len, device, transformer_options={}, f_offset=0):
+    # moss.MOSSImage.rope with the image and text moved by f_offset on the f axis
+    if f_offset == 0:
+        return model.rope(h, w, text_len, device, transformer_options)
+    rope_options = transformer_options.get("rope_options", {})
+    scales = (1.0, 1.0, rope_options.get("scale_y", 1.0), rope_options.get("scale_x", 1.0))
+    ids = torch.zeros(1, h * w + text_len, 4, device=device, dtype=torch.float32)
+    ids[0, :h * w, 1] = text_len + f_offset + rope_options.get("shift_t", 0.0)
+    ids[0, :h * w, 2] = ((torch.arange(h, device=device, dtype=torch.float32) - (h - 1) / 2) * float(scales[2] != 0) + rope_options.get("shift_y", 0.0)).repeat_interleave(w)
+    ids[0, :h * w, 3] = ((torch.arange(w, device=device, dtype=torch.float32) - (w - 1) / 2) * float(scales[3] != 0) + rope_options.get("shift_x", 0.0)).repeat(h)
+    ids[0, h * w:, 1] = torch.arange(text_len, device=device, dtype=torch.float32) + f_offset
+    pe = torch.cat([comfy.ldm.flux.math.rope(ids[..., i], d, 10000 * (s or 1.0) ** (-d / (d - 2))) for i, (d, s) in enumerate(zip(model.rope_axes_dim, scales))], dim=-3)
+    return pe.unsqueeze(1).transpose(1, 2).contiguous()
+
+
+def layout(method):
+    if method is None:
+        return ISOLATED  # as ComfyUI: references without a method take ai-toolkit's layout
+    if method not in LAYOUTS:
+        if method not in _warned_methods:
+            _warned_methods.add(method)
+            logging.warning("MOSS-Image Edit: reference method %r is not supported here, using %r. Supported: %s.", method, ISOLATED, ", ".join(LAYOUTS))
+        return ISOLATED
+    return method
 
 
 def reference_rope(model, shapes, device, transformer_options={}):
@@ -240,18 +294,25 @@ def layer_kv(kvs, rows, i, batch):
     return torch.cat([kvs[r][i][0] for r in rows]), torch.cat([kvs[r][i][1] for r in rows])
 
 
-def forward_edit(self, x, timestep, context, transformer_options, ref_latents, kv_cache="auto"):
-    """moss.MOSSImage._forward with reference latents (a list of [B, C, h, w])."""
+def forward_edit(self, x, timestep, context, transformer_options, ref_latents, kv_cache="auto", method=None, context_attention_bias=None):
+    """moss.MOSSImage._forward with reference latents (a list of [B, C, h, w]) in the layout of method."""
     B, _, H, W = x.shape
     dtype, device = x.dtype, x.device
     transformer_options = transformer_options.copy()
-    pe = self.rope(H, W, context.shape[1], device, transformer_options)
+    text_len = context.shape[1]
+    pe = body_rope(self, H, W, text_len, device, transformer_options, -text_len if layout(method) == ISOLATED else 0)
 
     vec = self.time_embedding(timestep_embedding(timestep, 256).to(dtype))
     mod = self.shared_block_modulation(vec).unflatten(-1, (6, -1)).unsqueeze(2).unbind(1)
     head_shift, head_scale = self.video_head_modulation(vec).unflatten(-1, (2, -1)).unsqueeze(2).unbind(1)
 
-    txt = self.text_embedder(context, pe[:, H * W:], transformer_options)
+    mask = text_mask = None
+    if context_attention_bias is not None:
+        # additive attention logit bias on the text keys (the weight of the prompt's image tokens); image and reference keys unbiased
+        bias = context_attention_bias.to(device=device, dtype=dtype)
+        text_mask = bias[:, None, None]
+        mask = torch.nn.functional.pad(bias, (H * W, sum(ref.shape[-2] * ref.shape[-1] for ref in ref_latents)))[:, None, None]
+    txt = text_embed(self, context, pe[:, H * W:], transformer_options, text_mask)
     sets, rows = reference_sets(ref_latents, B)
     kvs = cached_reference_kv(self, sets, dtype, device, transformer_options, kv_cache)
     if kvs is None:
@@ -278,10 +339,10 @@ def forward_edit(self, x, timestep, context, transformer_options, ref_latents, k
             del k, v
         if ("single_block", i) in blocks_replace:
             def block_wrap(args, block=block, ref_kv=ref_kv):
-                return {"img": body_block(block, args["img"], args["mod"], args["pe"], ref_kv, args["transformer_options"])}
+                return {"img": body_block(block, args["img"], args["mod"], args["pe"], ref_kv, args["transformer_options"], mask)}
             x = blocks_replace[("single_block", i)]({"img": x, "vec": vec, "mod": mod, "pe": pe, "transformer_options": transformer_options}, {"original_block": block_wrap})["img"]
         else:
-            x = body_block(block, x, mod, pe, ref_kv, transformer_options)
+            x = body_block(block, x, mod, pe, ref_kv, transformer_options, mask)
         del ref_kv
     comfy.model_prefetch.prefetch_queue_pop(prefetch_queue, device, None, malloc_scope="block")
     comfy.model_prefetch.malloc_graph_end()
