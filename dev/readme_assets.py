@@ -4,6 +4,7 @@ headless Chrome at 2x; and the gallery/findings cells (one JPEG each, labels sta
   python dev/readme_assets.py <lab>     # <lab>: the test folder with input/src_*.png and output/sweeps/*
 
 Writes assets/banner-{light,dark}.png, assets/workflow-{light,dark}.png, assets/card-<workflow>-{light,dark}.png,
+assets/registry-{icon,banner}.png (Comfy Registry),
 docs/samples/<task>/*.jpg and docs/findings/{strength,size,base}/*.jpg.
 """
 import html
@@ -96,6 +97,45 @@ p {{ margin: 16px 0 0; font-size: 19px; line-height: 1.45; color: {t['muted']}; 
 <div class="text"><h1>ComfyUI-<span>Moss-Image-Edit</span>-Native</h1>
 <p>Edit images with a text instruction on ComfyUI's native MOSS-Image, with the chinoll and HQ edit LoRAs.</p></div>
 <div class="built">One to four images · stock loaders and samplers · no extra dependencies</div>
+<div class="pairs">{columns}</div></body></html>"""
+
+
+def registry_icon(lab):
+    # 400x400 for the Comfy Registry and ComfyUI-Manager: the sunglasses edit, before on the left, after on the right
+    t = THEMES["dark"]
+    before, after = uri(lab / "input" / "src_cafe_woman.png"), uri(lab / "output/sweeps/gallery_chinoll/accessory.png")
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>
+body {{ margin: 0; width: 200px; height: 200px; background: {t['bg']}; overflow: hidden; position: relative; }}
+img {{ position: absolute; inset: 0; width: 200px; height: 200px; object-fit: cover; object-position: 50% 14%; }}
+.after {{ clip-path: inset(0 0 0 50%); }}
+.line {{ position: absolute; left: 99px; top: 0; width: 3px; height: 200px; background: {ACCENT}; }}
+.knob {{ position: absolute; left: 88px; top: 166px; width: 25px; height: 25px; border-radius: 50%; background: {ACCENT};
+         box-shadow: 0 0 0 3px {t['bg']}; }}
+</style></head><body><img src="{before}"><img class="after" src="{after}"><div class="line"></div><div class="knob"></div></body></html>"""
+
+
+def registry_banner(lab):
+    # 21:9 (1260x540) for the Comfy Registry: the README banner's title and three before/after pairs, stacked
+    t = THEMES["dark"]
+    pairs = [("sunglasses", "accessory", "50% 14%"), ("blue car", "color", "50% 60%"), ("watercolor", "style", "50% 50%")]
+    columns = "".join(f"""<div class="col"><img style="object-position:{focus}" src="{uri(lab / 'input' / f'src_{TASKS[task][0][0]}.png')}">
+<div class="arrow">↓</div><img style="object-position:{focus}" src="{uri(lab / 'output/sweeps/gallery_chinoll' / f'{task}.png')}"><span>{label}</span></div>"""
+                      for label, task, focus in pairs)
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>
+body {{ margin: 0; width: 630px; height: 270px; background: {t['bg']}; font-family: {FONT}; color: {t['ink']}; overflow: hidden; position: relative; }}
+.bar {{ position: absolute; left: 0; top: 0; width: 6px; height: 270px; background: {ACCENT}; }}
+.text {{ position: absolute; left: 30px; top: 40px; width: 262px; }}
+h1 {{ margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.6px; line-height: 1.1; }}
+h1 span {{ color: {ACCENT}; }}
+p {{ margin: 16px 0 0; font-size: 13.5px; line-height: 1.45; color: {t['muted']}; }}
+.pairs {{ position: absolute; right: 22px; top: 22px; display: flex; gap: 10px; }}
+.col {{ display: flex; flex-direction: column; align-items: center; width: 96px; }}
+.col img {{ width: 96px; height: 96px; object-fit: cover; border-radius: 7px; border: 1px solid {t['line']}; }}
+.arrow {{ color: {ACCENT}; font-size: 14px; line-height: 18px; height: 18px; }}
+.col span {{ margin-top: 6px; font-size: 11px; color: {t['muted']}; font-family: {MONO}; }}
+</style></head><body><div class="bar"></div>
+<div class="text"><h1><span>MOSS-Image Edit</span><br>native in ComfyUI</h1>
+<p>Edit images with a text instruction, with the chinoll and HQ edit LoRAs. One to four images, stock loaders and samplers.</p></div>
 <div class="pairs">{columns}</div></body></html>"""
 
 
@@ -234,6 +274,8 @@ def main():
     lab = Path(sys.argv[1]).expanduser().resolve()
     ASSETS.mkdir(exist_ok=True)
     cells(lab)
+    shoot(registry_icon(lab), 200, 200, ASSETS / "registry-icon.png")
+    shoot(registry_banner(lab), 630, 270, ASSETS / "registry-banner.png")
     for theme in THEMES:
         shoot(banner(theme, lab), 1280, 320, ASSETS / f"banner-{theme}.png")
         shoot(diagram(theme), 1660, 730, ASSETS / f"workflow-{theme}.png")

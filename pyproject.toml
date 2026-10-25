@@ -1,12 +1,20 @@
 [project]
-name = "comfyui-moss-image-edit-native"
-description = "Moss-Image-Edit (reference image editing LoRA) on ComfyUI's native MOSS-Image model, with ComfyUI's loaders, LoRA loader, samplers and memory management."
+name = "moss-image-edit-native"
+description = "MOSS-Image edit LoRAs (chinoll's Moss-Image-Edit and MOSS-Image-Edit-HQ) on ComfyUI's native MOSS-Image model: edit one to four images with a text instruction, with ComfyUI's loaders, LoRA loader, samplers and memory management."
 version = "0.2.0"
-license = { text = "GPL-3.0" }
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = ["Operating System :: OS Independent"]
 dependencies = []
 
 [project.urls]
 Repository = "https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native"
+Documentation = "https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native#readme"
+"Bug Tracker" = "https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native/issues"
 
 [tool.comfy]
+PublisherId = "pedromarinhodev"
 DisplayName = "MOSS-Image Edit (native)"
+Icon = "https://raw.githubusercontent.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native/main/assets/registry-icon.png"
+Banner = "https://raw.githubusercontent.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native/main/assets/registry-banner.png"
+requires-comfyui = ">=0.42.0"

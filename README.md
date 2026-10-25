@@ -39,6 +39,15 @@ take up to four images; image 1 is the one being edited.
 
 ## Install
 
+Search for **MOSS-Image Edit (native)** in ComfyUI-Manager, or install it from the
+[Comfy Registry](https://registry.comfy.org/nodes/moss-image-edit-native):
+
+```bash
+comfy node install moss-image-edit-native
+```
+
+Or clone it:
+
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/PedroMarinhoDev/ComfyUI-Moss-Image-Edit-Native
@@ -472,4 +481,4 @@ The LoRAs were trained by [chinoll](https://huggingface.co/chinoll) / [Chenkin-x
 [ai-toolkit](https://github.com/ostris/ai-toolkit)), on [MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT)
 by OpenMOSS. The example images were generated with FLUX.2 Klein.
 
-Licensed GPL-3.0, like ComfyUI and the upstream nodes.
+Licensed [GPL-3.0](LICENSE), like ComfyUI and the upstream nodes.
