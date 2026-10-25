@@ -18,13 +18,14 @@ MAX_REFERENCES = 4  # the LoRAs were trained with one to four references
 REFERENCE_METHOD = TEXT_START
 GRID = 16
 BUCKET_PIXELS = 1024 * 1024  # reference_max_edge 0: about the size the model and the LoRAs were trained and tested at
-# edit LoRA formats: the reference layout, and whether the text encoder also sees the references (ai-toolkit's
-# "Picture N:" vision prompt)
+# edit LoRA formats: the reference layout, and how big the text encoder sees each reference (ai-toolkit's "Picture N:"
+# vision prompt, at most vlm_max_pixels: ai-toolkit's default 384x384 = 144 tokens, 512x512 = 256 tokens for
+# MOSS-Image-Edit-HQ armV5), 0 where it doesn't see them
 EDIT_FORMATS = {
-    "Moss-Image-Edit (chinoll)": (TEXT_START, False),
-    "ai-toolkit (MOSS-Image-Edit-HQ)": (ISOLATED, True),
+    "Moss-Image-Edit (chinoll)": (TEXT_START, 0),
+    "ai-toolkit (MOSS-Image-Edit-HQ)": (ISOLATED, 384 * 384),
+    "ai-toolkit, 512 px vision (MOSS-Image-Edit-HQ v5)": (ISOLATED, 512 * 512),
 }
-VISION_MAX_PIXELS = 384 * 384  # ai-toolkit's vlm_max_pixels: the vision tower sees each reference at most this big
 VISION_BLOCK = "<|vision_start|><|image_pad|><|vision_end|>"
 
 
@@ -76,12 +77,12 @@ def reference_items(images):
     return items
 
 
-def vision_image(image):
+def vision_image(image, max_pixels):
     """One IMAGE item (H, W, C) -> [1, h, w, 3] for the vision tower: ai-toolkit's _prep_vlm_images, scaled down (never
-    up) to VISION_MAX_PIXELS, bicubic with antialiasing, at least 32 px a side."""
+    up) to max_pixels, bicubic with antialiasing, at least 32 px a side."""
     pixels = image[None, :, :, :3].movedim(-1, 1).float()
     h, w = pixels.shape[-2:]
-    scale = min(1.0, math.sqrt(VISION_MAX_PIXELS / (h * w)))
+    scale = min(1.0, math.sqrt(max_pixels / (h * w)))
     size = (max(round(h * scale), 32), max(round(w * scale), 32))
     if size != (h, w):
         pixels = torch.nn.functional.interpolate(pixels, size=size, mode="bicubic", antialias=True).clamp(0, 1)
@@ -137,7 +138,9 @@ class MOSSImageEditTextEncode(io.ComfyNode):
                 io.Combo.Input("edit_format", options=list(EDIT_FORMATS),
                                tooltip="The layout the LoRA was trained with. Moss-Image-Edit (chinoll): references at the text's start. "
                                        "ai-toolkit (akhaliq's MOSS-Image-Edit-HQ and other ai-toolkit edit LoRAs): references at the "
-                                       "image's position, and the text encoder also sees them, as \"Picture N:\" before the prompt."),
+                                       "image's position, and the text encoder also sees them, as \"Picture N:\" before the prompt, at most 384x384. "
+                                       "ai-toolkit, 512 px vision: the same with the text encoder seeing them at up to 512x512, as "
+                                       "MOSS-Image-Edit-HQ v5 (armV5) was trained."),
                 io.Autogrow.Input(
                     "images",
                     template=io.Autogrow.TemplateNames(io.Image.Input("image"), names=[f"image_{i}" for i in range(1, MAX_REFERENCES + 1)], min=1),
@@ -169,9 +172,9 @@ class MOSSImageEditTextEncode(io.ComfyNode):
     @classmethod
     def execute(cls, clip, vae, prompt, negative_prompt, edit_format, images: io.Autogrow.Type, reference_max_edge=0,
                 output_max_edge=0, kv_cache="auto", image_strength=1.0) -> io.NodeOutput:
-        method, vision = EDIT_FORMATS[edit_format]
+        method, vision_pixels = EDIT_FORMATS[edit_format]
         items = reference_items(images)
-        vision_images = [vision_image(image) for image in items] if vision and image_strength > 0 else []
+        vision_images = [vision_image(image, vision_pixels) for image in items] if vision_pixels and image_strength > 0 else []
         latents = [vae.encode(resize_reference(image, reference_max_edge)) for image in items]
         values = {"reference_latents": latents, "reference_latents_method": method, KV_CACHE: kv_cache}
         positive, negative = [node_helpers.conditioning_set_values(encode_prompt(clip, text, vision_images, image_strength), values)

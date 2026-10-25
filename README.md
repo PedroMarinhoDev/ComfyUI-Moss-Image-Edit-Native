@@ -21,20 +21,20 @@
   <a href="#how-it-works">How it works</a>
 </p>
 
-Edit an image, or combine up to four, with a text instruction, on ComfyUI's own MOSS-Image model and the two community
-edit LoRAs. It uses ComfyUI's stock loaders, LoRA loader, samplers and memory management (smart and dynamic VRAM,
+Edit an image, or combine up to four, with a text instruction, on ComfyUI's own MOSS-Image model and the community edit
+LoRAs: chinoll's, and MOSS-Image-Edit-HQ v3 and v5. It uses ComfyUI's stock loaders, LoRA loader, samplers and memory management (smart and dynamic VRAM,
 prefetching, partial offload), with no diffusers and no extra dependencies.
 
 ## Supported LoRAs
 
-| | [chinoll/Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) | [akhaliq/MOSS-Image-Edit-HQ](https://huggingface.co/akhaliq/MOSS-Image-Edit-HQ) (`armV3`) |
-|:--|:--|:--|
-| Trained with | its author's own trainer, 256 px, one reference | ai-toolkit edit mode with `kv_cache` |
-| Format in this pack | `Moss-Image-Edit (chinoll)` | `ai-toolkit (MOSS-Image-Edit-HQ)` |
-| Strengths | keeps faces and untouched areas closest to the source | best at text; stronger colors |
-| Weak spots | text (changes one sign of two) | overpaints fine structures; colors drift a little |
+| | [chinoll/Moss-Image-Edit](https://huggingface.co/chinoll/Moss-Image-Edit) | [MOSS-Image-Edit-HQ](https://huggingface.co/akhaliq/MOSS-Image-Edit-HQ) v3 (`armV3`) | [MOSS-Image-Edit-HQ](https://huggingface.co/akhaliq/MOSS-Image-Edit-HQ) v5 (`armV5`) |
+|:--|:--|:--|:--|
+| Trained with | its author's own trainer, 256 px, one reference | ai-toolkit edit mode with `kv_cache` | the same, continued from v4, with a masked loss and the images shown to the text encoder at 512 px |
+| Format in this pack | `Moss-Image-Edit (chinoll)` | `ai-toolkit (MOSS-Image-Edit-HQ)` | `ai-toolkit, 512 px vision (MOSS-Image-Edit-HQ v5)` |
+| Strengths | keeps faces and untouched areas closest to the source | removals and replacements; stronger colors | clean removals, keeps the person in two-image edits, the only one to change both signs in the text test |
+| Weak spots | text (changes one sign of two), replacing a subject | overpaints fine structures; colors drift a little | keeps the old scene in background swaps unless the references are 512 px ([why](#v5-new-backgrounds-need-512-px-references)) |
 
-Each LoRA runs in the exact layout it was trained with (checked against its training code, see [Tests](#tests)). Both
+Each LoRA runs in the exact layout it was trained with (checked against its training code, see [Tests](#tests)). All
 take up to four images; image 1 is the one being edited.
 
 ## Install
@@ -61,12 +61,15 @@ Models, from [Comfy-Org/MOSS-Image](https://huggingface.co/Comfy-Org/MOSS-Image)
 | `text_encoders` | `qwen3.5_9b_bf16` or `qwen3.5_9b_w4a8_gptq` (keep the vision tower: HQ uses it) |
 | `vae` | `flux2-vae_small` or `flux2-vae` (same encoder) |
 | `loras` | chinoll: `moss_image_edit_lora_bf16.safetensors` from [PedroMarinhoDev/Moss-Image-Edit-ComfyUI](https://huggingface.co/PedroMarinhoDev/Moss-Image-Edit-ComfyUI) |
-| `loras` | HQ: [`weights/armV3/armV3.safetensors`](https://huggingface.co/akhaliq/MOSS-Image-Edit-HQ/blob/main/weights/armV3/armV3.safetensors), saved as `moss_image_edit_hq_armV3.safetensors` |
+| `loras` | HQ v3: [`weights/armV3/armV3.safetensors`](https://huggingface.co/akhaliq/MOSS-Image-Edit-HQ/blob/main/weights/armV3/armV3.safetensors), saved as `moss_image_edit_hq_armV3.safetensors` |
+| `loras` | HQ v5: [`weights/armV5/armV5.safetensors`](https://huggingface.co/akhaliq/MOSS-Image-Edit-HQ/blob/main/weights/armV5/armV5.safetensors), saved as `moss_image_edit_hq_armV5.safetensors` |
 
 ```bash
 hf download PedroMarinhoDev/Moss-Image-Edit-ComfyUI moss_image_edit_lora_bf16.safetensors --local-dir ComfyUI/models/loras
 hf download akhaliq/MOSS-Image-Edit-HQ weights/armV3/armV3.safetensors --local-dir /tmp/hq && \
   mv /tmp/hq/weights/armV3/armV3.safetensors ComfyUI/models/loras/moss_image_edit_hq_armV3.safetensors
+hf download akhaliq/MOSS-Image-Edit-HQ weights/armV5/armV5.safetensors --local-dir /tmp/hq && \
+  mv /tmp/hq/weights/armV5/armV5.safetensors ComfyUI/models/loras/moss_image_edit_hq_armV5.safetensors
 ```
 
 <details>
@@ -117,9 +120,25 @@ the workflow's own inputs, prompt and result, with its file underneath.
     <p align="center"><a href="example_workflows/moss_image_edit_hq_multi_reference.json"><code>moss_image_edit_hq_multi_reference.json</code></a></p>
     </td>
   </tr>
+  <tr>
+    <td width="50%">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/card-moss_image_edit_hq_v5-dark.png">
+      <img alt="moss_image_edit_hq_v5" src="assets/card-moss_image_edit_hq_v5-light.png" width="100%">
+    </picture>
+    <p align="center"><a href="example_workflows/moss_image_edit_hq_v5.json"><code>moss_image_edit_hq_v5.json</code></a></p>
+    </td>
+    <td width="50%">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/card-moss_image_edit_hq_v5_multi_reference-dark.png">
+      <img alt="moss_image_edit_hq_v5_multi_reference" src="assets/card-moss_image_edit_hq_v5_multi_reference-light.png" width="100%">
+    </picture>
+    <p align="center"><a href="example_workflows/moss_image_edit_hq_v5_multi_reference.json"><code>moss_image_edit_hq_v5_multi_reference.json</code></a></p>
+    </td>
+  </tr>
 </table>
 
-All four use the same graph; only the LoRA, the format and the CFG differ:
+All six use the same graph; only the LoRA, the format and the CFG differ:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/workflow-dark.png">
@@ -138,138 +157,152 @@ The mark under each result: ✅ worked · ⚠️ partly · ❌ failed.
 ### Scene & style
 
 <table>
-  <tr><th width="22%">Task</th><th width="26%">Source</th><th width="26%">chinoll</th><th width="26%">HQ</th></tr>
+  <tr><th width="16%">Task</th><th width="21%">Source</th><th width="21%">chinoll</th><th width="21%">HQ v3</th><th width="21%">HQ v5</th></tr>
   <tr valign="top">
     <td><b>Background</b><br><sub><i>"Replace the background with a snowy mountain landscape, keeping the woman exactly the same."</i></sub></td>
-    <td><img src="docs/samples/background/source.jpg" width="190"></td>
-    <td><img src="docs/samples/background/chinoll.jpg" width="190"><br><sub>✅ Face, hands and cup kept.</sub></td>
-    <td><img src="docs/samples/background/hq.jpg" width="190"><br><sub>✅ Face, hands and cup kept; a craggier range.</sub></td>
+    <td><img src="docs/samples/background/source.jpg" width="160"></td>
+    <td><img src="docs/samples/background/chinoll.jpg" width="160"><br><sub>✅ Face, hands and cup kept.</sub></td>
+    <td><img src="docs/samples/background/hq.jpg" width="160"><br><sub>✅ Face, hands and cup kept; a craggier range.</sub></td>
+    <td><img src="docs/samples/background/hq5.jpg" width="160"><br><sub>❌ The café stays. With 512 px references v5 does swap it: [see below](#v5-new-backgrounds-need-512-px-references).</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Time of day</b><br><sub><i>"Make it a night scene with the street lamps lit."</i></sub></td>
-    <td><img src="docs/samples/tone/source.jpg" width="190"></td>
-    <td><img src="docs/samples/tone/chinoll.jpg" width="190"><br><sub>✅ Same street, relit.</sub></td>
-    <td><img src="docs/samples/tone/hq.jpg" width="190"><br><sub>✅ Same street, relit, a little darker.</sub></td>
+    <td><img src="docs/samples/tone/source.jpg" width="160"></td>
+    <td><img src="docs/samples/tone/chinoll.jpg" width="160"><br><sub>✅ Same street, relit.</sub></td>
+    <td><img src="docs/samples/tone/hq.jpg" width="160"><br><sub>✅ Same street, relit, a little darker.</sub></td>
+    <td><img src="docs/samples/tone/hq5.jpg" width="160"><br><sub>✅ Same street, relit; the darkest of the three.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Style</b><br><sub><i>"Turn this photo into a watercolor painting."</i></sub></td>
-    <td><img src="docs/samples/style/source.jpg" width="190"></td>
-    <td><img src="docs/samples/style/chinoll.jpg" width="190"><br><sub>✅ Composition kept.</sub></td>
-    <td><img src="docs/samples/style/hq.jpg" width="190"><br><sub>✅ Composition kept; looser water.</sub></td>
+    <td><img src="docs/samples/style/source.jpg" width="160"></td>
+    <td><img src="docs/samples/style/chinoll.jpg" width="160"><br><sub>✅ Composition kept.</sub></td>
+    <td><img src="docs/samples/style/hq.jpg" width="160"><br><sub>✅ Composition kept; looser water.</sub></td>
+    <td><img src="docs/samples/style/hq5.jpg" width="160"><br><sub>✅ Composition kept; close to v3.</sub></td>
   </tr>
 </table>
 
 ### Objects
 
 <table>
-  <tr><th width="22%">Task</th><th width="26%">Source</th><th width="26%">chinoll</th><th width="26%">HQ</th></tr>
+  <tr><th width="16%">Task</th><th width="21%">Source</th><th width="21%">chinoll</th><th width="21%">HQ v3</th><th width="21%">HQ v5</th></tr>
   <tr valign="top">
     <td><b>Add</b><br><sub><i>"Add a glass vase with red roses on the coffee table."</i></sub></td>
-    <td><img src="docs/samples/add/source.jpg" width="190"></td>
-    <td><img src="docs/samples/add/chinoll.jpg" width="190"><br><sub>✅ Vase on the table; the room is untouched.</sub></td>
-    <td><img src="docs/samples/add/hq.jpg" width="190"><br><sub>✅ Vase on the table, with a fuller bouquet.</sub></td>
+    <td><img src="docs/samples/add/source.jpg" width="160"></td>
+    <td><img src="docs/samples/add/chinoll.jpg" width="160"><br><sub>✅ Vase on the table; the room is untouched.</sub></td>
+    <td><img src="docs/samples/add/hq.jpg" width="160"><br><sub>✅ Vase on the table, with a fuller bouquet.</sub></td>
+    <td><img src="docs/samples/add/hq5.jpg" width="160"><br><sub>✅ Vase on the table, fuller bouquet.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Remove</b><br><sub><i>"Remove the man from the beach."</i></sub></td>
-    <td><img src="docs/samples/remove/source.jpg" width="190"></td>
-    <td><img src="docs/samples/remove/chinoll.jpg" width="190"><br><sub>❌ The man is still there at this seed.</sub></td>
-    <td><img src="docs/samples/remove/hq.jpg" width="190"><br><sub>✅ Only the man goes; the umbrella stays.</sub></td>
+    <td><img src="docs/samples/remove/source.jpg" width="160"></td>
+    <td><img src="docs/samples/remove/chinoll.jpg" width="160"><br><sub>❌ The man is still there at this seed.</sub></td>
+    <td><img src="docs/samples/remove/hq.jpg" width="160"><br><sub>✅ Only the man goes; the umbrella stays.</sub></td>
+    <td><img src="docs/samples/remove/hq5.jpg" width="160"><br><sub>✅ Only the man goes.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Replace</b><br><sub><i>"Replace the dog with a black cat."</i></sub></td>
-    <td><img src="docs/samples/replace/source.jpg" width="190"></td>
-    <td><img src="docs/samples/replace/chinoll.jpg" width="190"><br><sub>⚠️ Adds the cat beside the dog.</sub></td>
-    <td><img src="docs/samples/replace/hq.jpg" width="190"><br><sub>✅ The dog becomes a black cat.</sub></td>
+    <td><img src="docs/samples/replace/source.jpg" width="160"></td>
+    <td><img src="docs/samples/replace/chinoll.jpg" width="160"><br><sub>⚠️ Adds the cat beside the dog.</sub></td>
+    <td><img src="docs/samples/replace/hq.jpg" width="160"><br><sub>✅ The dog becomes a black cat.</sub></td>
+    <td><img src="docs/samples/replace/hq5.jpg" width="160"><br><sub>✅ The dog becomes a black cat.</sub></td>
   </tr>
 </table>
 
 ### Appearance
 
 <table>
-  <tr><th width="22%">Task</th><th width="26%">Source</th><th width="26%">chinoll</th><th width="26%">HQ</th></tr>
+  <tr><th width="16%">Task</th><th width="21%">Source</th><th width="21%">chinoll</th><th width="21%">HQ v3</th><th width="21%">HQ v5</th></tr>
   <tr valign="top">
     <td><b>Color</b><br><sub><i>"Change the color of the car to bright blue."</i></sub></td>
-    <td><img src="docs/samples/color/source.jpg" width="190"></td>
-    <td><img src="docs/samples/color/chinoll.jpg" width="190"><br><sub>✅ Street and chrome untouched.</sub></td>
-    <td><img src="docs/samples/color/hq.jpg" width="190"><br><sub>✅ Street and chrome untouched.</sub></td>
+    <td><img src="docs/samples/color/source.jpg" width="160"></td>
+    <td><img src="docs/samples/color/chinoll.jpg" width="160"><br><sub>✅ Street and chrome untouched.</sub></td>
+    <td><img src="docs/samples/color/hq.jpg" width="160"><br><sub>✅ Street and chrome untouched.</sub></td>
+    <td><img src="docs/samples/color/hq5.jpg" width="160"><br><sub>✅ Street untouched; the plate text drifts.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Material</b><br><sub><i>"Make the statue look like it is made of polished gold."</i></sub></td>
-    <td><img src="docs/samples/material/source.jpg" width="190"></td>
-    <td><img src="docs/samples/material/chinoll.jpg" width="190"><br><sub>✅ Shape kept; the pedestal and backdrop get lighter.</sub></td>
-    <td><img src="docs/samples/material/hq.jpg" width="190"><br><sub>✅ Shape kept; the pedestal gets lighter.</sub></td>
+    <td><img src="docs/samples/material/source.jpg" width="160"></td>
+    <td><img src="docs/samples/material/chinoll.jpg" width="160"><br><sub>✅ Shape kept; the pedestal and backdrop get lighter.</sub></td>
+    <td><img src="docs/samples/material/hq.jpg" width="160"><br><sub>✅ Shape kept; the pedestal gets lighter.</sub></td>
+    <td><img src="docs/samples/material/hq5.jpg" width="160"><br><sub>✅ Gold; the pedestal turns gold too.</sub></td>
   </tr>
 </table>
 
 ### People
 
 <table>
-  <tr><th width="22%">Task</th><th width="26%">Source</th><th width="26%">chinoll</th><th width="26%">HQ</th></tr>
+  <tr><th width="16%">Task</th><th width="21%">Source</th><th width="21%">chinoll</th><th width="21%">HQ v3</th><th width="21%">HQ v5</th></tr>
   <tr valign="top">
     <td><b>Expression</b><br><sub><i>"Make the woman smile warmly, showing her teeth."</i></sub></td>
-    <td><img src="docs/samples/expression/source.jpg" width="190"></td>
-    <td><img src="docs/samples/expression/chinoll.jpg" width="190"><br><sub>✅ Same person, pose and hands.</sub></td>
-    <td><img src="docs/samples/expression/hq.jpg" width="190"><br><sub>✅ Same person, pose and hands.</sub></td>
+    <td><img src="docs/samples/expression/source.jpg" width="160"></td>
+    <td><img src="docs/samples/expression/chinoll.jpg" width="160"><br><sub>✅ Same person, pose and hands.</sub></td>
+    <td><img src="docs/samples/expression/hq.jpg" width="160"><br><sub>✅ Same person, pose and hands.</sub></td>
+    <td><img src="docs/samples/expression/hq5.jpg" width="160"><br><sub>✅ Same person, pose and hands.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Hair</b><br><sub><i>"Give the woman short straight blonde hair."</i></sub></td>
-    <td><img src="docs/samples/hair/source.jpg" width="190"></td>
-    <td><img src="docs/samples/hair/chinoll.jpg" width="190"><br><sub>✅ Short blonde bob.</sub></td>
-    <td><img src="docs/samples/hair/hq.jpg" width="190"><br><sub>✅ Blonde bob, longer than asked.</sub></td>
+    <td><img src="docs/samples/hair/source.jpg" width="160"></td>
+    <td><img src="docs/samples/hair/chinoll.jpg" width="160"><br><sub>✅ Short blonde bob.</sub></td>
+    <td><img src="docs/samples/hair/hq.jpg" width="160"><br><sub>✅ Blonde bob, longer than asked.</sub></td>
+    <td><img src="docs/samples/hair/hq5.jpg" width="160"><br><sub>✅ Blonde bob, a little long.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Accessory</b><br><sub><i>"Add black sunglasses to the woman."</i></sub></td>
-    <td><img src="docs/samples/accessory/source.jpg" width="190"></td>
-    <td><img src="docs/samples/accessory/chinoll.jpg" width="190"><br><sub>✅ Sunglasses on; nothing else changes.</sub></td>
-    <td><img src="docs/samples/accessory/hq.jpg" width="190"><br><sub>✅ Sunglasses on; nothing else changes.</sub></td>
+    <td><img src="docs/samples/accessory/source.jpg" width="160"></td>
+    <td><img src="docs/samples/accessory/chinoll.jpg" width="160"><br><sub>✅ Sunglasses on; nothing else changes.</sub></td>
+    <td><img src="docs/samples/accessory/hq.jpg" width="160"><br><sub>✅ Sunglasses on; nothing else changes.</sub></td>
+    <td><img src="docs/samples/accessory/hq5.jpg" width="160"><br><sub>✅ Sunglasses on; nothing else changes.</sub></td>
   </tr>
 </table>
 
 ### Pose · Text
 
 <table>
-  <tr><th width="22%">Task</th><th width="26%">Source</th><th width="26%">chinoll</th><th width="26%">HQ</th></tr>
+  <tr><th width="16%">Task</th><th width="21%">Source</th><th width="21%">chinoll</th><th width="21%">HQ v3</th><th width="21%">HQ v5</th></tr>
   <tr valign="top">
     <td><b>Pose</b><br><sub><i>"Make the dog lie down on the grass."</i></sub></td>
-    <td><img src="docs/samples/pose/source.jpg" width="190"></td>
-    <td><img src="docs/samples/pose/chinoll.jpg" width="190"><br><sub>❌ The dog stays seated.</sub></td>
-    <td><img src="docs/samples/pose/hq.jpg" width="190"><br><sub>❌ The dog stays seated.</sub></td>
+    <td><img src="docs/samples/pose/source.jpg" width="160"></td>
+    <td><img src="docs/samples/pose/chinoll.jpg" width="160"><br><sub>❌ The dog stays seated.</sub></td>
+    <td><img src="docs/samples/pose/hq.jpg" width="160"><br><sub>❌ The dog stays seated.</sub></td>
+    <td><img src="docs/samples/pose/hq5.jpg" width="160"><br><sub>❌ The dog stays seated.</sub></td>
   </tr>
   <tr valign="top">
     <td><b>Text</b><br><sub><i>"Change the text on the signs from "BAKERY" to "COFFEE"."</i></sub></td>
-    <td><img src="docs/samples/text/source.jpg" width="190"></td>
-    <td><img src="docs/samples/text/chinoll.jpg" width="190"><br><sub>⚠️ Only the right-hand sign changes.</sub></td>
-    <td><img src="docs/samples/text/hq.jpg" width="190"><br><sub>⚠️ Only the left-hand sign changes.</sub></td>
+    <td><img src="docs/samples/text/source.jpg" width="160"></td>
+    <td><img src="docs/samples/text/chinoll.jpg" width="160"><br><sub>⚠️ Only the right-hand sign changes.</sub></td>
+    <td><img src="docs/samples/text/hq.jpg" width="160"><br><sub>⚠️ Only the left-hand sign changes.</sub></td>
+    <td><img src="docs/samples/text/hq5.jpg" width="160"><br><sub>⚠️ Only the left-hand sign changes.</sub></td>
   </tr>
 </table>
 
 ### Two images
 
 <table>
-  <tr><th width="20%">Task</th><th width="20%">Image 1</th><th width="20%">Image 2</th><th width="20%">chinoll</th><th width="20%">HQ</th></tr>
+  <tr><th width="15%">Task</th><th width="17%">Image 1</th><th width="17%">Image 2</th><th width="17%">chinoll</th><th width="17%">HQ v3</th><th width="17%">HQ v5</th></tr>
   <tr valign="top">
     <td><b>Outfit</b><br><sub><i>"Dress the woman in image 1 in the black leather jacket from image 2."</i></sub></td>
-    <td><img src="docs/samples/multi/source.jpg" width="140"></td>
-    <td><img src="docs/samples/multi/source2.jpg" width="140"></td>
-    <td><img src="docs/samples/multi/chinoll.jpg" width="140"><br><sub>✅ Jacket on; pose, hands and cup kept.</sub></td>
-    <td><img src="docs/samples/multi/hq.jpg" width="140"><br><sub>✅ Jacket on; pose, hands and cup kept.</sub></td>
+    <td><img src="docs/samples/multi/source.jpg" width="120"></td>
+    <td><img src="docs/samples/multi/source2.jpg" width="120"></td>
+    <td><img src="docs/samples/multi/chinoll.jpg" width="120"><br><sub>✅ Jacket on; pose, hands and cup kept.</sub></td>
+    <td><img src="docs/samples/multi/hq.jpg" width="120"><br><sub>✅ Jacket on; pose, hands and cup kept.</sub></td>
+    <td><img src="docs/samples/multi/hq5.jpg" width="120"><br><sub>✅ Jacket on, open over the sweater.</sub></td>
   </tr>
 </table>
 
 ## Recommended settings
 
-These are the workflows' defaults. They come from over 300 test edits on an RTX 3090: first one setting at a time on
-seven edit types, then the best settings on all fourteen, on SFT and Base, with two seeds each.
+These are the workflows' defaults. They come from over 400 test edits on an RTX 3090 and an RTX 4090: first one
+setting at a time on seven edit types, then the best settings on all fourteen, on SFT and Base, with two seeds each.
 
-| Setting | chinoll | HQ | Why |
-|:--|:-:|:-:|:--|
-| LoRA strength | **1.0** | **1.0** | Lower strengths redraw the scene instead of editing it |
-| Image size | 1 MP bucket | 1 MP bucket | References and output the same size; `reference_max_edge` 0, `output_max_edge` 0 |
-| CFG | **5** | **3** | chinoll at 4 also removes nearby objects; HQ is best at 3 |
-| Negative pass | skip layer 22 | skip layer 22 | The official MOSS sampler default; slightly cleaner |
-| Steps · sampler | 30 · euler / simple | 30 · euler / simple | 50 steps look the same |
-| Negative prompt | empty | empty | As both were trained |
-| Model | **SFT** | **SFT** | Both LoRAs were trained on SFT |
+| Setting | chinoll | HQ v3 | HQ v5 | Why |
+|:--|:-:|:-:|:-:|:--|
+| LoRA strength | **1.0** | **1.0** | **1.0** | Lower strengths redraw the scene instead of editing it |
+| Image size | 1 MP bucket | 1 MP bucket | 1 MP bucket; **512 px references for a new background** | References and output the same size; `reference_max_edge` 0, `output_max_edge` 0 |
+| CFG | **5** | **3** | **3** | chinoll at 4 also removes nearby objects; HQ is best at 3, v5 the same from 2 to 4 |
+| Negative pass | skip layer 22 | skip layer 22 | skip layer 22 | The official MOSS sampler default; slightly cleaner |
+| Steps · sampler | 30 · euler / simple | 30 · euler / simple | 30 · euler / simple | 50 steps and the normal scheduler look the same |
+| Negative prompt | empty | empty | empty | As they were trained |
+| Model | **SFT** | **SFT** | **SFT** | All three were trained on SFT |
 
 ### Strength must be 1.0
 
@@ -371,12 +404,39 @@ replacement and two-image edits fail much more often, and HQ also breaks hair ed
 </table>
 <sub>Recommended settings at 1024 px, seed 42.</sub>
 
+### v5: new backgrounds need 512 px references
+
+v5 was trained to leave everything outside the edit untouched, and with full-size references it holds on to the scene
+too: asked for a new background, it returns the café. With `reference_max_edge` at 512 (the official v5 workflow's
+setting) it replaces the background. Smaller references cost fidelity elsewhere, though: the text edit redraws the
+shopfront and the outfit edit changes her face. So keep the default, and use 512 for background and scene changes.
+
+<table>
+  <tr><th></th><th>New background</th><th>Change a sign</th><th>Outfit from image 2</th></tr>
+  <tr valign="top">
+    <td><b>Full size</b><br><sub>the default</sub></td>
+    <td><img src="docs/findings/v5/background_full.jpg" width="190"><br><sub>❌ the café stays</sub></td>
+    <td><img src="docs/findings/v5/text_full.jpg" width="190"><br><sub>⚠️ one sign of two</sub></td>
+    <td><img src="docs/findings/v5/multi_full.jpg" width="190"><br><sub>✅ same person</sub></td>
+  </tr>
+  <tr valign="top">
+    <td><b>512 px</b><br><sub><code>reference_max_edge</code> 512</sub></td>
+    <td><img src="docs/findings/v5/background_ref512.jpg" width="190"><br><sub>✅ mountains</sub></td>
+    <td><img src="docs/findings/v5/text_ref512.jpg" width="190"><br><sub>❌ the shopfront is redrawn</sub></td>
+    <td><img src="docs/findings/v5/multi_ref512.jpg" width="190"><br><sub>❌ her face changes</sub></td>
+  </tr>
+</table>
+<sub>HQ v5 with the recommended settings, output 1 MP, seed 42. 724 px references keep the café too.</sub>
+
 <details>
 <summary>Other things tested</summary>
 
 - **CFG** 2 to 5: chinoll is best at 5 (at 4 it removed the beach umbrella along with the man); HQ at 3, with 2 and 4 close.
 - **Steps** 30 vs 50: no visible difference.
 - **HQ without its images in the prompt**: text edits fail and a background change turns white. The images matter.
+- **v5's vision size**: 384 px (v3's) and 512 px (its training size) look alike on seven edit types; the format uses 512.
+- **The official v5 workflow** (512 px references, 50 steps, normal scheduler) replaces backgrounds, and has the same
+  costs as 512 px references above.
 - **HQ `image_strength` 2**: no better than 1.
 - **HQ with smaller references** (512 and 724 px, its training cap): worse text and two-image edits than full size.
 - **chinoll at its 256 px training size**: edits hardest there (both signs change), but the output is only 256 px.
@@ -395,7 +455,7 @@ Encodes the instruction and its negative with one to four images, in the layout 
 | Input | Default | |
 |:--|:-:|:--|
 | `prompt` / `negative_prompt` | – / empty | The instruction. Name the images *image 1*, *image 2*…; image 1 is the one edited. |
-| `edit_format` | chinoll | `Moss-Image-Edit (chinoll)` or `ai-toolkit (MOSS-Image-Edit-HQ)`. For ai-toolkit LoRAs the text encoder also sees each image (at most 384² px, as "Picture N:" before the prompt), as in training. |
+| `edit_format` | chinoll | `Moss-Image-Edit (chinoll)`, `ai-toolkit (MOSS-Image-Edit-HQ)` or `ai-toolkit, 512 px vision (MOSS-Image-Edit-HQ v5)`. For ai-toolkit LoRAs the text encoder also sees each image (at most 384² px, or 512² px for v5, as "Picture N:" before the prompt), as in training. |
 | `images` | – | One to four; each batch item counts as one. |
 | `reference_max_edge` | 0 | 0: each image is resized, up or down, to the 1 MP size closest to its aspect ratio (multiples of 16, no crop): 4032×3024 and 640×480 both become 1168×880. A number caps the long side instead, never upscaling. |
 | `output_max_edge` | 0 | 0: the output is the size of image 1's reference. Keep the two equal. |

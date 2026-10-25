@@ -1,7 +1,7 @@
 [project]
 name = "moss-image-edit-native"
 description = "MOSS-Image edit LoRAs (chinoll's Moss-Image-Edit and MOSS-Image-Edit-HQ) on ComfyUI's native MOSS-Image model: edit one to four images with a text instruction, with ComfyUI's loaders, LoRA loader, samplers and memory management."
-version = "0.2.0"
+version = "0.3.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 classifiers = ["Operating System :: OS Independent"]

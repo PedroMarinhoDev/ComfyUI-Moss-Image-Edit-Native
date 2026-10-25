@@ -5,7 +5,7 @@ headless Chrome at 2x; and the gallery/findings cells (one JPEG each, labels sta
 
 Writes assets/banner-{light,dark}.png, assets/workflow-{light,dark}.png, assets/card-<workflow>-{light,dark}.png,
 assets/registry-{icon,banner}.png (Comfy Registry),
-docs/samples/<task>/*.jpg and docs/findings/{strength,size,base}/*.jpg.
+docs/samples/<task>/*.jpg and docs/findings/{strength,size,base,v5}/*.jpg.
 """
 import html
 import subprocess
@@ -54,6 +54,9 @@ CARDS = {
     "moss_image_edit_multi_reference": ("chinoll · two images", ["input/src_cafe_woman.png", "input/src_leather_jacket.png"],
                                         TASKS["multi"][1], "output/sweeps/gallery_chinoll/multi.png"),
     "moss_image_edit_hq": ("HQ · one image", ["input/src_red_car.png"], TASKS["color"][1], "output/sweeps/gallery_hq/color.png"),
+    "moss_image_edit_hq_v5": ("HQ v5 · one image", ["input/src_red_car.png"], TASKS["color"][1], "output/sweeps/gallery_v5/color.png"),
+    "moss_image_edit_hq_v5_multi_reference": ("HQ v5 · two images", ["input/src_cafe_woman.png", "input/src_leather_jacket.png"],
+                                              TASKS["multi"][1], "output/sweeps/gallery_v5/multi.png"),
     "moss_image_edit_hq_multi_reference": ("HQ · two images", ["input/src_cafe_woman.png", "input/src_leather_jacket.png"],
                                            TASKS["multi"][1], "output/sweeps/gallery_hq/multi.png"),
 }
@@ -257,6 +260,7 @@ def cells(lab):
             thumb(lab / "input" / f"src_{sources[1]}.png", out / "source2.jpg")
         thumb(sweeps / "gallery_chinoll" / f"{task}.png", out / "chinoll.jpg")
         thumb(sweeps / "gallery_hq" / f"{task}.png", out / "hq.jpg")
+        thumb(sweeps / "gallery_v5" / f"{task}.png", out / "hq5.jpg")
     for task in ("multi", "remove"):
         for lora, prefix in (("chinoll", "c"), ("hq", "h")):
             for strength, config in (("025", "s025"), ("050", "s050"), ("075", "s075"), ("100", "base")):
@@ -264,6 +268,10 @@ def cells(lab):
     for task in ("text", "color"):
         for variant, config in (("ref1024_out1024", "c_base"), ("ref512_out1024", "c_ref512"), ("ref512_out512", "c_res512")):
             thumb(sweeps / config / f"{task}.png", DOCS / "findings" / "size" / f"{task}_{variant}.jpg", 400)
+    # HQ v5: full-size references against 512 px ones (the background swap needs them, other edits pay for them)
+    for task in ("background", "text", "multi"):
+        for variant, config in (("full", "v5_base"), ("ref512", "v5_ref512")):
+            thumb(sweeps / config / f"{task}.png", DOCS / "findings" / "v5" / f"{task}_{variant}.jpg", 400)
     for task in ("hair", "replace", "text", "multi"):
         for lora, prefix in (("chinoll", "cbest"), ("hq", "hbest")):
             for model in ("sft", "base"):
